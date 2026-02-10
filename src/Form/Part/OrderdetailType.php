@@ -73,6 +73,11 @@ class OrderdetailType extends AbstractType
             'label' => 'orderdetails.edit.obsolete',
         ]);
 
+        $builder->add('kicad_export', CheckboxType::class, [
+            'required' => false,
+            'label' => 'orderdetails.edit.kicad_export',
+        ]);
+
         //Add pricedetails after we know the data, so we can set the default currency
         $builder->addEventListener(FormEvents::PRE_SET_DATA, function (FormEvent $event) use ($options): void {
             /** @var Orderdetail $orderdetail */
