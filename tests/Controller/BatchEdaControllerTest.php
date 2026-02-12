@@ -48,8 +48,8 @@ class BatchEdaControllerTest extends WebTestCase
         $client = static::createClient();
         $this->loginAsUser($client, 'admin');
 
-        // Request with part IDs in session — the page expects ids[] query param
-        $client->request('GET', '/en/tools/batch_eda_edit', ['ids' => [1, 2, 3]]);
+        // Request with part IDs as comma-separated string (controller uses getString)
+        $client->request('GET', '/en/tools/batch_eda_edit', ['ids' => '1,2,3']);
 
         self::assertResponseIsSuccessful();
     }
@@ -71,7 +71,7 @@ class BatchEdaControllerTest extends WebTestCase
         $this->loginAsUser($client, 'admin');
 
         // Load the form page first
-        $crawler = $client->request('GET', '/en/tools/batch_eda_edit', ['ids' => [1, 2]]);
+        $crawler = $client->request('GET', '/en/tools/batch_eda_edit', ['ids' => '1,2']);
 
         self::assertResponseIsSuccessful();
 
