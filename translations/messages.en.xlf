@@ -642,6 +642,12 @@ Sub elements will be moved upwards.</target>
         <target>Group</target>
       </segment>
     </unit>
+    <unit id="8rz303Z" name="specifications.eda_visibility.help">
+      <segment state="translated">
+        <source>specifications.eda_visibility.help</source>
+        <target>Export this parameter as an EDA field</target>
+      </segment>
+    </unit>
     <unit id="XclPxI9" name="specification.create">
       <segment state="translated">
         <source>specification.create</source>
@@ -2924,6 +2930,42 @@ If you have done this incorrectly or if a computer is no longer trusted, you can
         <target>Attachments</target>
       </segment>
     </unit>
+    <unit id="f3Dggp6" name="part.table.eda_status">
+      <segment state="translated">
+        <source>part.table.eda_status</source>
+        <target>EDA</target>
+      </segment>
+    </unit>
+    <unit id="Q_myBuD" name="eda.status.symbol_set">
+      <segment state="translated">
+        <source>eda.status.symbol_set</source>
+        <target>KiCad symbol set</target>
+      </segment>
+    </unit>
+    <unit id="QGLfvit" name="eda.status.footprint_set">
+      <segment state="translated">
+        <source>eda.status.footprint_set</source>
+        <target>KiCad footprint set</target>
+      </segment>
+    </unit>
+    <unit id="hkze9M." name="eda.status.reference_set">
+      <segment state="translated">
+        <source>eda.status.reference_set</source>
+        <target>Reference prefix set</target>
+      </segment>
+    </unit>
+    <unit id="OTXbAfL" name="eda.status.complete">
+      <segment state="translated">
+        <source>eda.status.complete</source>
+        <target>EDA fields complete (symbol, footprint, reference)</target>
+      </segment>
+    </unit>
+    <unit id="z9E5RB." name="eda.status.partial">
+      <segment state="translated">
+        <source>eda.status.partial</source>
+        <target>EDA fields partially set</target>
+      </segment>
+    </unit>
     <unit id="bMkafCp" name="flash.login_successful">
       <segment state="translated">
         <source>flash.login_successful</source>
@@ -3264,6 +3306,12 @@ If you have done this incorrectly or if a computer is no longer trusted, you can
       <segment state="translated">
         <source>orderdetails.edit.obsolete</source>
         <target>No longer available</target>
+      </segment>
+    </unit>
+    <unit id="6H0WQWq" name="orderdetails.edit.eda_visibility">
+      <segment state="translated">
+        <source>orderdetails.edit.eda_visibility</source>
+        <target>Visible in EDA</target>
       </segment>
     </unit>
     <unit id="ZsO5AKM" name="orderdetails.edit.supplierpartnr.placeholder">
@@ -9500,6 +9548,12 @@ Please note, that you can not impersonate a disabled user. If you try you will g
         <target>EIGP 114 barcode (e.g. the datamatrix codes on digikey and mouser orders)</target>
       </segment>
     </unit>
+    <unit id="BnqcKWx" name="scan_dialog.mode.lcsc">
+      <segment state="translated">
+        <source>scan_dialog.mode.lcsc</source>
+        <target>LCSC.com barcode</target>
+      </segment>
+    </unit>
     <unit id="QSMS_Bd" name="scan_dialog.info_mode">
       <segment state="translated">
         <source>scan_dialog.info_mode</source>
@@ -9510,6 +9564,24 @@ Please note, that you can not impersonate a disabled user. If you try you will g
       <segment state="translated">
         <source>label_scanner.decoded_info.title</source>
         <target>Decoded information</target>
+      </segment>
+    </unit>
+    <unit id="kQnodbA" name="label_scanner.target_found">
+      <segment state="translated">
+        <source>label_scanner.target_found</source>
+        <target>Item found in database</target>
+      </segment>
+    </unit>
+    <unit id="7Arfw2q" name="label_scanner.scan_result.title">
+      <segment state="translated">
+        <source>label_scanner.scan_result.title</source>
+        <target>Scan result</target>
+      </segment>
+    </unit>
+    <unit id="PTh4EK_" name="label_scanner.no_locations">
+      <segment state="translated">
+        <source>label_scanner.no_locations</source>
+        <target>Part is not stored at any location.</target>
       </segment>
     </unit>
     <unit id="nmXQWcS" name="label_generator.edit_profiles">
@@ -9945,6 +10017,18 @@ Please note, that you can not impersonate a disabled user. If you try you will g
         <target>This value determines the depth of the category tree, that is visible inside KiCad. 0 means that only the top level categories are visible. Set to a value &gt; 0 to show more levels. Set to -1, to show all parts of Part-DB inside a sigle cnategory in KiCad.</target>
       </segment>
     </unit>
+    <unit id="X5.rQdO" name="settings.misc.kicad_eda.datasheet_link">
+      <segment state="translated">
+        <source>settings.misc.kicad_eda.datasheet_link</source>
+        <target>Datasheet field links to PDF</target>
+      </segment>
+    </unit>
+    <unit id="Fm1QTCs" name="settings.misc.kicad_eda.datasheet_link.help">
+      <segment state="translated">
+        <source>settings.misc.kicad_eda.datasheet_link.help</source>
+        <target>When enabled, the datasheet field in KiCad will link to the actual PDF file (if found). When disabled, it will link to the Part-DB page instead. The Part-DB page link is always available as a separate "Part-DB URL" field.</target>
+      </segment>
+    </unit>
     <unit id="VwvmcWE" name="settings.behavior.sidebar">
       <segment state="translated">
         <source>settings.behavior.sidebar</source>
@@ -10285,6 +10369,24 @@ Please note, that you can not impersonate a disabled user. If you try you will g
       <segment state="translated">
         <source>settings.behavior.part_info.show_part_image_overlay.help</source>
         <target>Show the image overlay with attachment details on hovering over the part image gallery.</target>
+      </segment>
+    </unit>
+    <unit id="0iYdzdk" name="settings.behavior.keybindings">
+      <segment state="translated">
+        <source>settings.behavior.keybindings</source>
+        <target>Keybindings</target>
+      </segment>
+    </unit>
+    <unit id="_x13bMa" name="settings.behavior.keybindings.enable_special_characters">
+      <segment state="translated">
+        <source>settings.behavior.keybindings.enable_special_characters</source>
+        <target>Enable special character keybindings</target>
+      </segment>
+    </unit>
+    <unit id="Af8Zzqr" name="settings.behavior.keybindings.enable_special_characters.help">
+      <segment state="translated">
+        <source>settings.behavior.keybindings.enable_special_characters.help</source>
+        <target>Enable Alt+key shortcuts to insert special characters (Greek letters, mathematical symbols, etc.) in text input fields. Disable this if the shortcuts conflict with your keyboard layout or system shortcuts.</target>
       </segment>
     </unit>
     <unit id="ALfPkeR" name="perm.config.change_system_settings">
@@ -10911,6 +11013,84 @@ Please note, that you can not impersonate a disabled user. If you try you will g
         <target>Bulk Info Provider Import</target>
       </segment>
     </unit>
+    <unit id="VtS1yT7" name="part_list.action.group.eda">
+      <segment state="translated">
+        <source>part_list.action.group.eda</source>
+        <target>EDA / KiCad</target>
+      </segment>
+    </unit>
+    <unit id="swU1Rp2" name="part_list.action.batch_edit_eda">
+      <segment state="translated">
+        <source>part_list.action.batch_edit_eda</source>
+        <target>Batch Edit EDA Fields</target>
+      </segment>
+    </unit>
+    <unit id="ZaS_Hg5" name="batch_eda.title">
+      <segment state="translated">
+        <source>batch_eda.title</source>
+        <target>Batch Edit EDA Fields</target>
+      </segment>
+    </unit>
+    <unit id="k2FDo7A" name="batch_eda.description">
+      <segment state="translated">
+        <source>batch_eda.description</source>
+        <target>Edit EDA/KiCad fields for %count% selected parts. Check the "Apply" box next to each field you want to change.</target>
+      </segment>
+    </unit>
+    <unit id="WVHbic3" name="batch_eda.show_parts">
+      <segment state="translated">
+        <source>batch_eda.show_parts</source>
+        <target>Show selected parts</target>
+      </segment>
+    </unit>
+    <unit id="ubQd6G4" name="batch_eda.apply_hint">
+      <segment state="translated">
+        <source>batch_eda.apply_hint</source>
+        <target>Only fields with the "Apply" checkbox checked will be changed. Unchecked fields are left unchanged.</target>
+      </segment>
+    </unit>
+    <unit id="w.5FGYL" name="batch_eda.apply">
+      <segment state="translated">
+        <source>batch_eda.apply</source>
+        <target>Apply</target>
+      </segment>
+    </unit>
+    <unit id="9EmHp5C" name="batch_eda.field">
+      <segment state="translated">
+        <source>batch_eda.field</source>
+        <target>Field</target>
+      </segment>
+    </unit>
+    <unit id="xHaCnEQ" name="batch_eda.value">
+      <segment state="translated">
+        <source>batch_eda.value</source>
+        <target>Value</target>
+      </segment>
+    </unit>
+    <unit id="PLqIBvC" name="batch_eda.submit">
+      <segment state="translated">
+        <source>batch_eda.submit</source>
+        <target>Apply to Selected Parts</target>
+      </segment>
+    </unit>
+    <unit id="5nO7Fpq" name="batch_eda.cancel">
+      <segment state="translated">
+        <source>batch_eda.cancel</source>
+        <target>Cancel</target>
+      </segment>
+    </unit>
+    <unit id="vhlPBNU" name="batch_eda.success">
+      <segment state="translated">
+        <source>batch_eda.success</source>
+        <target>EDA fields updated successfully.</target>
+      </segment>
+    </unit>
+    <unit id="2fMo760" name="batch_eda.no_parts_selected">
+      <segment state="translated">
+        <source>batch_eda.no_parts_selected</source>
+        <target>No parts were selected for batch editing.</target>
+      </segment>
+    </unit>
     <unit id="yzpXFkB" name="info_providers.bulk_import.step1.spn_recommendation">
       <segment state="translated">
         <source>info_providers.bulk_import.step1.spn_recommendation</source>
@@ -10921,6 +11101,96 @@ Please note, that you can not impersonate a disabled user. If you try you will g
       <segment state="translated">
         <source>info_providers.bulk_import.update_part</source>
         <target>Update Part</target>
+      </segment>
+    </unit>
+    <unit id="back_to_jobs_btn" name="info_providers.bulk_import.back_to_jobs">
+      <segment state="translated">
+        <source>info_providers.bulk_import.back_to_jobs</source>
+        <target>Back to Jobs</target>
+      </segment>
+    </unit>
+    <unit id="back_to_parts_btn" name="info_providers.bulk_import.back_to_parts">
+      <segment state="translated">
+        <source>info_providers.bulk_import.back_to_parts</source>
+        <target>Back to Parts</target>
+      </segment>
+    </unit>
+    <unit id="job_completed_msg" name="info_providers.bulk_import.job_completed">
+      <segment state="translated">
+        <source>info_providers.bulk_import.job_completed</source>
+        <target>Job completed!</target>
+      </segment>
+    </unit>
+    <unit id="job_completed_desc" name="info_providers.bulk_import.job_completed.description">
+      <segment state="translated">
+        <source>info_providers.bulk_import.job_completed.description</source>
+        <target>All parts have been processed. You can review the results below or navigate back to the parts list.</target>
+      </segment>
+    </unit>
+    <unit id="recommended_badge" name="info_providers.bulk_import.recommended">
+      <segment state="translated">
+        <source>info_providers.bulk_import.recommended</source>
+        <target>Top</target>
+      </segment>
+    </unit>
+    <unit id="exact_match_badge" name="info_providers.bulk_import.exact_match">
+      <segment state="translated">
+        <source>info_providers.bulk_import.exact_match</source>
+        <target>Exact name match</target>
+      </segment>
+    </unit>
+    <unit id="mpn_match_badge" name="info_providers.bulk_import.mpn_match">
+      <segment state="translated">
+        <source>info_providers.bulk_import.mpn_match</source>
+        <target>MPN matches</target>
+      </segment>
+    </unit>
+    <unit id="active_jobs_header" name="info_providers.bulk_import.active_jobs">
+      <segment state="translated">
+        <source>info_providers.bulk_import.active_jobs</source>
+        <target>Active Jobs</target>
+      </segment>
+    </unit>
+    <unit id="finished_jobs_header" name="info_providers.bulk_import.finished_jobs">
+      <segment state="translated">
+        <source>info_providers.bulk_import.finished_jobs</source>
+        <target>History</target>
+      </segment>
+    </unit>
+    <unit id="spn_match_badge" name="info_providers.bulk_import.spn_match">
+      <segment state="translated">
+        <source>info_providers.bulk_import.spn_match</source>
+        <target>SPN matches</target>
+      </segment>
+    </unit>
+    <unit id="match_badge" name="info_providers.bulk_import.match">
+      <segment state="translated">
+        <source>info_providers.bulk_import.match</source>
+        <target>Match</target>
+      </segment>
+    </unit>
+    <unit id="quick_apply_btn" name="info_providers.bulk_import.quick_apply">
+      <segment state="translated">
+        <source>info_providers.bulk_import.quick_apply</source>
+        <target>Quick Apply</target>
+      </segment>
+    </unit>
+    <unit id="quick_apply_tooltip" name="info_providers.bulk_import.quick_apply.tooltip">
+      <segment state="translated">
+        <source>info_providers.bulk_import.quick_apply.tooltip</source>
+        <target>Apply this provider result to the part without opening the edit form</target>
+      </segment>
+    </unit>
+    <unit id="quick_apply_all_btn" name="info_providers.bulk_import.quick_apply_all">
+      <segment state="translated">
+        <source>info_providers.bulk_import.quick_apply_all</source>
+        <target>Apply All (Top Results)</target>
+      </segment>
+    </unit>
+    <unit id="quick_apply_all_tooltip" name="info_providers.bulk_import.quick_apply_all.tooltip">
+      <segment state="translated">
+        <source>info_providers.bulk_import.quick_apply_all.tooltip</source>
+        <target>Apply the top-ranked search result to all pending parts without individual review</target>
       </segment>
     </unit>
     <unit id="e_DDQ2u" name="info_providers.bulk_import.prefetch_details">
@@ -12311,6 +12581,102 @@ Buerklin-API Authentication server:
         <target>Backup restore is disabled by server configuration.</target>
       </segment>
     </unit>
+    <unit id="oAb35wU" name="update_manager.backup.create">
+      <segment state="translated">
+        <source>update_manager.backup.create</source>
+        <target>Create Backup</target>
+      </segment>
+    </unit>
+    <unit id="ms26oI0" name="update_manager.backup.create.confirm">
+      <segment state="translated">
+        <source>update_manager.backup.create.confirm</source>
+        <target>Create a full backup now? This may take a moment.</target>
+      </segment>
+    </unit>
+    <unit id="H9y0eLa" name="update_manager.backup.created">
+      <segment state="translated">
+        <source>update_manager.backup.created</source>
+        <target>Backup created successfully.</target>
+      </segment>
+    </unit>
+    <unit id="bMhXPVB" name="update_manager.backup.delete.confirm">
+      <segment state="translated">
+        <source>update_manager.backup.delete.confirm</source>
+        <target>Are you sure you want to delete this backup?</target>
+      </segment>
+    </unit>
+    <unit id="8tw67c_" name="update_manager.backup.deleted">
+      <segment state="translated">
+        <source>update_manager.backup.deleted</source>
+        <target>Backup deleted successfully.</target>
+      </segment>
+    </unit>
+    <unit id="BzBBuqk" name="update_manager.backup.delete_error">
+      <segment state="translated">
+        <source>update_manager.backup.delete_error</source>
+        <target>Failed to delete backup.</target>
+      </segment>
+    </unit>
+    <unit id="2olmcSs" name="update_manager.log.delete.confirm">
+      <segment state="translated">
+        <source>update_manager.log.delete.confirm</source>
+        <target>Are you sure you want to delete this log?</target>
+      </segment>
+    </unit>
+    <unit id=".ZrVHpp" name="update_manager.log.deleted">
+      <segment state="translated">
+        <source>update_manager.log.deleted</source>
+        <target>Log deleted successfully.</target>
+      </segment>
+    </unit>
+    <unit id="P2JI5Yw" name="update_manager.log.delete_error">
+      <segment state="translated">
+        <source>update_manager.log.delete_error</source>
+        <target>Failed to delete log.</target>
+      </segment>
+    </unit>
+    <unit id="Yos9FWk" name="update_manager.view_log">
+      <segment state="translated">
+        <source>update_manager.view_log</source>
+        <target>View log</target>
+      </segment>
+    </unit>
+    <unit id="B9uA2va" name="update_manager.delete">
+      <segment state="translated">
+        <source>update_manager.delete</source>
+        <target>Delete</target>
+      </segment>
+    </unit>
+    <unit id="ZtgvnXB" name="update_manager.backup.download">
+      <segment state="translated">
+        <source>update_manager.backup.download</source>
+        <target>Download backup</target>
+      </segment>
+    </unit>
+    <unit id="wxtmrnP" name="update_manager.backup.download.password_label">
+      <segment state="translated">
+        <source>update_manager.backup.download.password_label</source>
+        <target>Confirm your password to download</target>
+      </segment>
+    </unit>
+    <unit id="MIlTTgL" name="update_manager.backup.download.security_warning">
+      <segment state="translated">
+        <source>update_manager.backup.download.security_warning</source>
+        <target>Backups contain sensitive data including password hashes and secrets. Please confirm your password to proceed with the download.</target>
+      </segment>
+    </unit>
+    <unit id="kZPHBRt" name="update_manager.backup.download.invalid_password">
+      <segment state="translated">
+        <source>update_manager.backup.download.invalid_password</source>
+        <target>Invalid password. Backup download denied.</target>
+      </segment>
+    </unit>
+    <unit id="AZOjnE0" name="update_manager.backup.docker_warning">
+      <segment state="translated">
+        <source>update_manager.backup.docker_warning</source>
+        <target>Docker installation detected. Backups are stored in var/backups/ which is not a persistent volume. Use the download button to save backups externally, or mount var/backups/ as a volume in your docker-compose.yml.</target>
+      </segment>
+    </unit>
     <unit id="kHKChQB" name="settings.ips.conrad">
       <segment state="translated">
         <source>settings.ips.conrad</source>
@@ -12507,6 +12873,168 @@ Buerklin-API Authentication server:
       <segment state="translated">
         <source>log.element_edited.changed_fields.last_stocktake_at</source>
         <target>Last stocktake</target>
+      </segment>
+    </unit>
+    <unit id="GNWhoTW" name="part.table.eda_reference">
+      <segment state="translated">
+        <source>part.table.eda_reference</source>
+        <target>EDA Reference</target>
+      </segment>
+    </unit>
+    <unit id="tW4yCbf" name="part.table.eda_value">
+      <segment state="translated">
+        <source>part.table.eda_value</source>
+        <target>EDA value</target>
+      </segment>
+    </unit>
+    <unit id="s1pgReC" name="settings.misc.kicad_eda.default_parameter_visibility">
+      <segment state="translated">
+        <source>settings.misc.kicad_eda.default_parameter_visibility</source>
+        <target>Default EDA visibility of parameters</target>
+      </segment>
+    </unit>
+    <unit id="Z78QunV" name="settings.misc.kicad_eda.default_parameter_visibility.help">
+      <segment state="translated">
+        <source>settings.misc.kicad_eda.default_parameter_visibility.help</source>
+        <target>EDA visibility for all [part] parameters who does not have an explicit visibility set. When enabled all parameters will be visible in the EDA software by default.</target>
+      </segment>
+    </unit>
+    <unit id="J6pYnaC" name="settings.misc.kicad_eda.default_orderdetails_visibility">
+      <segment state="translated">
+        <source>settings.misc.kicad_eda.default_orderdetails_visibility</source>
+        <target>Default EDA visibility of purchase infos</target>
+      </segment>
+    </unit>
+    <unit id="Hiye4C." name="settings.misc.kicad_eda.default_orderdetails_visibility.help">
+      <segment state="translated">
+        <source>settings.misc.kicad_eda.default_orderdetails_visibility.help</source>
+        <target>EDA visibility for all purchase infos who does not have an explicit visibility set. When enabled all purchase infos will be visible in the EDA software by default.</target>
+      </segment>
+    </unit>
+    <unit id="aEgd0if" name="label_scanner.open">
+      <segment state="translated">
+        <source>label_scanner.open</source>
+        <target>View details</target>
+      </segment>
+    </unit>
+    <unit id="vw_0Qws" name="label_scanner.db_part_found">
+      <segment state="translated">
+        <source>label_scanner.db_part_found</source>
+        <target>Database [part] found for barcode</target>
+      </segment>
+    </unit>
+    <unit id="zntajcd" name="label_scanner.part_can_be_created">
+      <segment state="translated">
+        <source>label_scanner.part_can_be_created</source>
+        <target>[Part] can be created</target>
+      </segment>
+    </unit>
+    <unit id="cLTbd9w" name="label_scanner.part_can_be_created.help">
+      <segment state="translated">
+        <source>label_scanner.part_can_be_created.help</source>
+        <target>No matching [part] was found in the database, but you can create a new [part] based of this barcode.</target>
+      </segment>
+    </unit>
+    <unit id="FfHA3Yf" name="label_scanner.part_create_btn">
+      <segment state="translated">
+        <source>label_scanner.part_create_btn</source>
+        <target>Create [part] from barcode</target>
+      </segment>
+    </unit>
+    <unit id="xH258F." name="parts.create_from_scan.title">
+      <segment state="translated">
+        <source>parts.create_from_scan.title</source>
+        <target>Create [part] from label scan</target>
+      </segment>
+    </unit>
+    <unit id="8WZYwRJ" name="scan_dialog.mode.amazon">
+      <segment state="translated">
+        <source>scan_dialog.mode.amazon</source>
+        <target>Amazon barcode</target>
+      </segment>
+    </unit>
+    <unit id="BQWuR_G" name="settings.ips.canopy">
+      <segment state="translated">
+        <source>settings.ips.canopy</source>
+        <target>Canopy</target>
+      </segment>
+    </unit>
+    <unit id="44BfYzy" name="settings.ips.canopy.alwaysGetDetails">
+      <segment state="translated">
+        <source>settings.ips.canopy.alwaysGetDetails</source>
+        <target>Always fetch details</target>
+      </segment>
+    </unit>
+    <unit id="so_ms3t" name="settings.ips.canopy.alwaysGetDetails.help">
+      <segment state="translated">
+        <source>settings.ips.canopy.alwaysGetDetails.help</source>
+        <target>When selected, more details will be fetched from canopy when creating a part. This causes an additional API request, but gives product bullet points and category info.</target>
+      </segment>
+    </unit>
+    <unit id="D055xh8" name="attachment.sandbox.warning">
+      <segment state="translated">
+        <source>attachment.sandbox.warning</source>
+        <target>WARNING: You are viewing an user uploaded attachment. This is untrusted content. Proceed with care.</target>
+      </segment>
+    </unit>
+    <unit id="bRcdnJK" name="attachment.sandbox.back_to_partdb">
+      <segment state="translated">
+        <source>attachment.sandbox.back_to_partdb</source>
+        <target>Back to Part-DB</target>
+      </segment>
+    </unit>
+    <unit id="MzyA7N8" name="settings.system.attachments.showHTMLAttachments">
+      <segment state="translated">
+        <source>settings.system.attachments.showHTMLAttachments</source>
+        <target>Show uploaded HTML file attachments (sandboxed)</target>
+      </segment>
+    </unit>
+    <unit id="V_LJkRy" name="settings.system.attachments.showHTMLAttachments.help">
+      <segment state="translated">
+        <source>settings.system.attachments.showHTMLAttachments.help</source>
+        <target>⚠️ When enabled, user uploaded HTML attachments can be viewed directly in the browser. Many potential malicious functions are restricted, still this is a potential security risk and should only be enabled, if you trust the users who can upload files.</target>
+      </segment>
+    </unit>
+    <unit id="BQo2xWi" name="attachment.sandbox.title">
+      <segment state="translated">
+        <source>attachment.sandbox.title</source>
+        <target>HTML [Attachment]</target>
+      </segment>
+    </unit>
+    <unit id="sJ6v9uJ" name="attachment.sandbox.as_plain_text">
+      <segment state="translated">
+        <source>attachment.sandbox.as_plain_text</source>
+        <target>View as plain text</target>
+      </segment>
+    </unit>
+    <unit id="Ehsj93c" name="modal.cancel">
+      <segment state="translated">
+        <source>modal.cancel</source>
+        <target>Cancel</target>
+      </segment>
+    </unit>
+    <unit id="jdpoFf2" name="update_manager.web_updates_allowed">
+      <segment state="translated">
+        <source>update_manager.web_updates_allowed</source>
+        <target>Web updates allowed</target>
+      </segment>
+    </unit>
+    <unit id="bdWa7is" name="update_manager.backup_restore_allowed">
+      <segment state="translated">
+        <source>update_manager.backup_restore_allowed</source>
+        <target>Backup restore allowed</target>
+      </segment>
+    </unit>
+    <unit id="kllGQEN" name="update_manager.backup_download_allowed">
+      <segment state="translated">
+        <source>update_manager.backup_download_allowed</source>
+        <target>Backup download allowed</target>
+      </segment>
+    </unit>
+    <unit id="b8JxfcX" name="part.create_from_info_provider.lot_filled_from_barcode">
+      <segment state="translated">
+        <source>part.create_from_info_provider.lot_filled_from_barcode</source>
+        <target>[Part_lot] created from barcode: Please check if the data is correct and desired.</target>
       </segment>
     </unit>
   </file>
