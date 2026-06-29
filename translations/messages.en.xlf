@@ -12653,6 +12653,12 @@ Buerklin-API Authentication server:
         <target>Generate component image</target>
       </segment>
     </unit>
+    <unit id="vcalc_attach_generate_hint" name="tools.value_calc.attach.generate_hint">
+      <segment state="translated">
+        <source>tools.value_calc.attach.generate_hint</source>
+        <target>Opens in a new tab. Save any unsaved changes here first.</target>
+      </segment>
+    </unit>
     <unit id="vcalc_gen_flash_success" name="part.generate_image.flash.success">
       <segment state="translated">
         <source>part.generate_image.flash.success</source>
