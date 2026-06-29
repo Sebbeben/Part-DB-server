@@ -175,6 +175,12 @@
         <target>Unknown tolerance code</target>
       </segment>
     </unit>
+    <unit id="vcalc_attach_nothing" name="tools.value_calc.attach.nothing">
+      <segment state="translated">
+        <source>tools.value_calc.attach.nothing</source>
+        <target>Please generate an image first.</target>
+      </segment>
+    </unit>
     <unit id="vcalc_c_code" name="tools.value_calc.capacitor.code">
       <segment state="translated">
         <source>tools.value_calc.capacitor.code</source>

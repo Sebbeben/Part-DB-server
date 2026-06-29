@@ -9,7 +9,24 @@
 {% block card_content %}
     <p class="text-muted">{% trans %}tools.value_calc.explanation{% endtrans %}</p>
 
-    <div {{ stimulus_controller('pages/valueCalculator') }}>
+    <div {{ stimulus_controller('pages/valueCalculator', part is not null ? {
+        endpoint: path('part_generate_image', {id: part.id}),
+        csrf: csrf_token('generate_image' ~ part.id),
+    } : {}) }}>
+        {% if part is not null %}
+            <div class="alert alert-info d-flex flex-wrap align-items-center gap-3">
+                <div>
+                    <i class="fas fa-link"></i>
+                    {% trans with {'%part%': part.name} %}tools.value_calc.attach.context{% endtrans %}
+                </div>
+                <div class="form-check ms-auto">
+                    <input class="form-check-input" type="checkbox" id="vc-attach-preview" checked
+                           {{ stimulus_target('pages/valueCalculator', 'previewInput') }}>
+                    <label class="form-check-label" for="vc-attach-preview">{% trans %}tools.value_calc.attach.as_preview{% endtrans %}</label>
+                </div>
+            </div>
+        {% endif %}
+
         <ul class="nav nav-tabs mb-3" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="vc-resistor-tab" data-bs-toggle="tab" data-bs-target="#vc-resistor"
@@ -34,6 +51,15 @@
                             <div {{ stimulus_target('pages/valueCalculator', 'resistorSvg') }}></div>
                         </div>
                         <div class="text-center text-muted small mb-2" {{ stimulus_target('pages/valueCalculator', 'resistorSpec') }}></div>
+                        {% if part is not null %}
+                            <div class="text-center mb-2">
+                                <button type="button" class="btn btn-sm btn-success" data-svg="resistor"
+                                        data-name="{% trans %}tools.value_calc.resistor.title{% endtrans %}"
+                                        {{ stimulus_action('pages/valueCalculator', 'attachToPart') }}>
+                                    <i class="fas fa-paperclip"></i> {% trans %}tools.value_calc.attach.button{% endtrans %}
+                                </button>
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
 
@@ -179,6 +205,15 @@
                                    {{ stimulus_action('pages/valueCalculator', 'decodeCapacitor', 'input') }}>
                         </div>
                         <div class="text-center mb-2" {{ stimulus_target('pages/valueCalculator', 'capDecodeSvg') }}></div>
+                        {% if part is not null %}
+                            <div class="text-center mb-2">
+                                <button type="button" class="btn btn-sm btn-success" data-svg="capDecode"
+                                        data-name="{% trans %}tools.value_calc.capacitor.title{% endtrans %}"
+                                        {{ stimulus_action('pages/valueCalculator', 'attachToPart') }}>
+                                    <i class="fas fa-paperclip"></i> {% trans %}tools.value_calc.attach.button{% endtrans %}
+                                </button>
+                            </div>
+                        {% endif %}
                         <div class="alert alert-secondary" {{ stimulus_target('pages/valueCalculator', 'capDecodeResult') }}></div>
                     </div>
                     <div class="col-md-6 mb-3">
@@ -190,6 +225,15 @@
                                    {{ stimulus_action('pages/valueCalculator', 'encodeCapacitor', 'input') }}>
                         </div>
                         <div class="text-center mb-2" {{ stimulus_target('pages/valueCalculator', 'capEncodeSvg') }}></div>
+                        {% if part is not null %}
+                            <div class="text-center mb-2">
+                                <button type="button" class="btn btn-sm btn-success" data-svg="capEncode"
+                                        data-name="{% trans %}tools.value_calc.capacitor.title{% endtrans %}"
+                                        {{ stimulus_action('pages/valueCalculator', 'attachToPart') }}>
+                                    <i class="fas fa-paperclip"></i> {% trans %}tools.value_calc.attach.button{% endtrans %}
+                                </button>
+                            </div>
+                        {% endif %}
                         <div class="alert alert-secondary" {{ stimulus_target('pages/valueCalculator', 'capEncodeResult') }}></div>
                     </div>
                 </div>
@@ -244,6 +288,15 @@
                 </div>
                 <div class="text-center mb-1" {{ stimulus_target('pages/valueCalculator', 'smdSvg') }}></div>
                 <div class="text-center text-muted small mb-2" {{ stimulus_target('pages/valueCalculator', 'smdSpec') }}></div>
+                {% if part is not null %}
+                    <div class="text-center mb-2">
+                        <button type="button" class="btn btn-sm btn-success" data-svg="smd"
+                                data-name="{% trans %}tools.value_calc.smd.title{% endtrans %}"
+                                {{ stimulus_action('pages/valueCalculator', 'attachToPart') }}>
+                            <i class="fas fa-paperclip"></i> {% trans %}tools.value_calc.attach.button{% endtrans %}
+                        </button>
+                    </div>
+                {% endif %}
                 <div class="alert alert-secondary" {{ stimulus_target('pages/valueCalculator', 'smdResult') }}></div>
             </div>
         </div>

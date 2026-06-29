@@ -37,6 +37,7 @@ use App\Entity\ProjectSystem\Project;
 use App\Exceptions\AttachmentDownloadException;
 use App\Form\Part\PartBaseType;
 use App\Services\Attachments\AttachmentSubmitHandler;
+use App\Services\Attachments\GeneratedImageAttachmentHelper;
 use App\Services\Attachments\PartPreviewGenerator;
 use App\Services\EntityMergers\Mergers\PartMerger;
 use App\Services\InfoProviderSystem\PartInfoRetriever;
@@ -162,6 +163,34 @@ final class PartController extends AbstractController
         return $this->renderPartForm('edit', $request, $part, [], [
             'bulk_job' => $bulkJob
         ]);
+    }
+
+    #[Route(path: '/{id}/generate_image', name: 'part_generate_image', methods: ['POST'])]
+    public function generateImage(Part $part, Request $request, GeneratedImageAttachmentHelper $helper): Response
+    {
+        $this->denyAccessUnlessGranted('edit', $part);
+
+        if (!$this->isCsrfTokenValid('generate_image' . $part->getID(), $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token');
+        }
+
+        $svg = (string) $request->request->get('svg', '');
+        //Basic guard: the payload must look like an SVG image (it is sanitized again on storage)
+        if ($svg === '' || !str_contains($svg, '<svg')) {
+            $this->addFlash('error', 'part.generate_image.flash.invalid');
+            return $this->redirectToRoute('part_info', ['id' => $part->getID()]);
+        }
+
+        $name = trim((string) $request->request->get('name', ''));
+        $setAsPreview = $request->request->getBoolean('preview', true);
+
+        $helper->attachSvgToPart($part, $svg, $name !== '' ? $name : 'Generated image', $setAsPreview);
+        $this->commentHelper->setMessage('Generated component image');
+        $this->em->flush();
+
+        $this->addFlash('success', 'part.generate_image.flash.success');
+
+        return $this->redirectToRoute('part_info', ['id' => $part->getID()]);
     }
 
     #[Route(path: '/{id}/bulk-import-complete/{jobId}', name: 'part_bulk_import_complete', methods: ['POST'])]

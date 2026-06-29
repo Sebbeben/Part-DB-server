@@ -1,0 +1,97 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * This file is part of Part-DB (https://github.com/Part-DB/Part-DB-symfony).
+ *
+ *  Copyright (C) 2019 - 2024 Jan Böhmer (https://github.com/jbtronics)
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU Affero General Public License as published
+ *  by the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU Affero General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Affero General Public License
+ *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+namespace App\Services\Attachments;
+
+use App\Entity\Attachments\AttachmentType;
+use App\Entity\Attachments\AttachmentUpload;
+use App\Entity\Attachments\PartAttachment;
+use App\Entity\Parts\Part;
+use Doctrine\ORM\EntityManagerInterface;
+
+/**
+ * Creates attachments from SVG markup that was generated client-side (e.g. by the
+ * resistor/capacitor value calculator) and attaches them to a part.
+ */
+class GeneratedImageAttachmentHelper
+{
+    private const ATTACHMENT_TYPE_NAME = 'Generated image';
+
+    public function __construct(
+        private readonly EntityManagerInterface $em,
+        private readonly AttachmentSubmitHandler $submitHandler,
+    ) {
+    }
+
+    /**
+     * Stores the given SVG markup as a sanitized picture attachment of the part.
+     *
+     * @param  Part    $part           The part the image should be attached to
+     * @param  string  $svg            The raw SVG markup
+     * @param  string  $name           The name shown for the attachment
+     * @param  bool    $setAsPreview   Whether the image should become the part's preview picture
+     */
+    public function attachSvgToPart(Part $part, string $svg, string $name, bool $setAsPreview = true): PartAttachment
+    {
+        $attachment = new PartAttachment();
+        $attachment->setName($name !== '' ? $name : 'Generated image');
+        $attachment->setAttachmentType($this->getGeneratedImageType());
+        $part->addAttachment($attachment);
+
+        //Reuse the regular upload pipeline so the SVG is sanitized and (optionally) becomes the preview image.
+        $upload = new AttachmentUpload(
+            file: null,
+            data: base64_encode($svg),
+            filename: 'generated.svg',
+            becomePreviewIfEmpty: $setAsPreview,
+        );
+        $this->submitHandler->handleUpload($attachment, $upload);
+
+        //If explicitly requested, force this attachment to become the preview picture even if one already exists.
+        if ($setAsPreview && $attachment->isPicture()) {
+            $part->setMasterPictureAttachment($attachment);
+        }
+
+        $this->em->persist($attachment);
+
+        return $attachment;
+    }
+
+    /**
+     * Returns the attachment type used for generated images, creating it if needed.
+     */
+    private function getGeneratedImageType(): AttachmentType
+    {
+        /** @var AttachmentType $type */
+        $type = $this->em->getRepository(AttachmentType::class)->findOrCreateForInfoProvider(self::ATTACHMENT_TYPE_NAME);
+
+        //A newly created type is not persisted yet, and the attachment_type relation does not cascade persist.
+        if ($type->getID() === null) {
+            $type->setFiletypeFilter('image/*');
+            $type->setAlternativeNames(self::ATTACHMENT_TYPE_NAME);
+            $this->em->persist($type);
+        }
+
+        return $type;
+    }
+}

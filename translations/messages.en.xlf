@@ -12629,6 +12629,42 @@ Buerklin-API Authentication server:
         <target>6 bands</target>
       </segment>
     </unit>
+    <unit id="vcalc_attach_context" name="tools.value_calc.attach.context">
+      <segment state="translated">
+        <source>tools.value_calc.attach.context</source>
+        <target>The generated image can be attached to part "%part%". Pick a component below and click "Attach to part".</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_attach_preview" name="tools.value_calc.attach.as_preview">
+      <segment state="translated">
+        <source>tools.value_calc.attach.as_preview</source>
+        <target>Use as preview image</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_attach_button" name="tools.value_calc.attach.button">
+      <segment state="translated">
+        <source>tools.value_calc.attach.button</source>
+        <target>Attach to part</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_attach_generate" name="tools.value_calc.attach.generate_button">
+      <segment state="translated">
+        <source>tools.value_calc.attach.generate_button</source>
+        <target>Generate component image</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_gen_flash_success" name="part.generate_image.flash.success">
+      <segment state="translated">
+        <source>part.generate_image.flash.success</source>
+        <target>Generated image was attached to the part.</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_gen_flash_invalid" name="part.generate_image.flash.invalid">
+      <segment state="translated">
+        <source>part.generate_image.flash.invalid</source>
+        <target>No valid image was generated. Please try again.</target>
+      </segment>
+    </unit>
     <unit id="vcalc_size" name="tools.value_calc.size">
       <segment state="translated">
         <source>tools.value_calc.size</source>

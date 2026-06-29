@@ -22,6 +22,7 @@ declare(strict_types=1);
  */
 namespace App\Controller;
 
+use App\Entity\Parts\Part;
 use App\Services\Attachments\AttachmentSubmitHandler;
 use App\Services\Attachments\AttachmentURLGenerator;
 use App\Services\Attachments\BuiltinAttachmentsFinder;
@@ -30,7 +31,9 @@ use App\Services\Doctrine\NatsortDebugHelper;
 use App\Services\System\GitVersionInfoProvider;
 use App\Services\System\UpdateAvailableFacade;
 use App\Settings\AppSettings;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Runtime\SymfonyRuntime;
@@ -131,10 +134,22 @@ class ToolsController extends AbstractController
     }
 
     #[Route(path: '/value_calc', name: 'tools_value_calculator')]
-    public function valueCalculator(): Response
+    public function valueCalculator(Request $request, EntityManagerInterface $em): Response
     {
         $this->denyAccessUnlessGranted('@tools.value_calculator');
 
-        return $this->render('tools/value_calculator/value_calculator.html.twig');
+        //Optionally the calculator can be opened in the context of a part, to attach the generated image to it.
+        $part = null;
+        $partId = $request->query->getInt('part');
+        if ($partId > 0) {
+            $part = $em->find(Part::class, $partId);
+            if ($part !== null) {
+                $this->denyAccessUnlessGranted('edit', $part);
+            }
+        }
+
+        return $this->render('tools/value_calculator/value_calculator.html.twig', [
+            'part' => $part,
+        ]);
     }
 }

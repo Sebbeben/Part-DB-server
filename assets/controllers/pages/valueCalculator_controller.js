@@ -18,6 +18,7 @@
  */
 
 import {Controller} from "@hotwired/stimulus";
+import * as bootbox from "bootbox";
 import {trans} from "../../translator.js";
 
 /**
@@ -101,7 +102,13 @@ export default class extends Controller {
         "capValueInput", "capEncodeResult", "capEncodeSvg", "capBodyColor",
         "capPitch", "capDiameter", "capVoltage", "capSpec",
         "smdCodeInput", "smdResult", "smdSvg", "smdBodyColor", "smdPackage", "smdSpec",
+        "previewInput",
     ];
+
+    static values = {
+        endpoint: String,
+        csrf: String,
+    };
 
     connect() {
         this.bandCount = 5;
@@ -110,6 +117,47 @@ export default class extends Controller {
         this.setBandsFromValue(4700, 1);
         this.updateResistor();
         this.updateCapSpec();
+    }
+
+    /**
+     * Posts the currently shown SVG of the chosen picture to the server so it gets
+     * attached to the part the calculator was opened for. A normal form submit is
+     * used so the server-side redirect and flash message just work.
+     */
+    attachToPart(event) {
+        if (!this.hasEndpointValue) {
+            return;
+        }
+        const containers = {
+            resistor: this.hasResistorSvgTarget ? this.resistorSvgTarget : null,
+            capDecode: this.hasCapDecodeSvgTarget ? this.capDecodeSvgTarget : null,
+            capEncode: this.hasCapEncodeSvgTarget ? this.capEncodeSvgTarget : null,
+            smd: this.hasSmdSvgTarget ? this.smdSvgTarget : null,
+        };
+        const container = containers[event.currentTarget.dataset.svg];
+        const svg = container ? container.innerHTML.trim() : "";
+        if (!svg.includes("<svg")) {
+            bootbox.alert(trans("tools.value_calc.attach.nothing"));
+            return;
+        }
+
+        const preview = this.hasPreviewInputTarget ? this.previewInputTarget.checked : true;
+        const form = document.createElement("form");
+        form.method = "post";
+        form.action = this.endpointValue;
+        const add = (name, value) => {
+            const input = document.createElement("input");
+            input.type = "hidden";
+            input.name = name;
+            input.value = value;
+            form.appendChild(input);
+        };
+        add("svg", svg);
+        add("name", event.currentTarget.dataset.name || "");
+        add("preview", preview ? "1" : "0");
+        add("_token", this.csrfValue);
+        document.body.appendChild(form);
+        form.submit();
     }
 
     /*
