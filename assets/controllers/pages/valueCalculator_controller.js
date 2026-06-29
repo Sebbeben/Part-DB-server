@@ -286,20 +286,22 @@ export default class extends Controller {
         this.updateResistor();
     }
 
-    /** Draws the resistor SVG with the given band colors. */
+    /** Draws a 3D-shaded axial resistor SVG with the given band colors. */
     drawResistor(colors) {
-        const width = 360;
-        const height = 120;
-        const bodyX = 70;
-        const bodyW = 220;
-        const bodyY = 30;
-        const bodyH = 60;
+        const uid = this.svgId();
+        const width = 400;
+        const height = 140;
+        const cy = height / 2;
+        const bodyX = 96;
+        const bodyW = 208;
+        const bodyH = 66;
+        const bodyY = cy - bodyH / 2;
 
         // Distribute the bands across the body, leaving the tolerance band set apart
         const n = colors.length;
-        const bandW = 14;
-        const leftPad = 18;
-        const rightPad = 26; // extra gap before the tolerance band
+        const bandW = 16;
+        const leftPad = 22;
+        const rightPad = 32; // extra gap before the tolerance band
         const usable = bodyW - leftPad - rightPad;
         const step = usable / (n - 1);
 
@@ -309,16 +311,30 @@ export default class extends Controller {
             // Put the last band (tolerance/temp) towards the right end
             let x = bodyX + leftPad + i * step;
             if (i === n - 1) {
-                x = bodyX + bodyW - rightPad + 4;
+                x = bodyX + bodyW - rightPad + 8;
             }
-            bands += `<rect x="${x - bandW / 2}" y="${bodyY}" width="${bandW}" height="${bodyH}" fill="${c.hex}" stroke="#0003"/>`;
+            bands += `<rect x="${x - bandW / 2}" y="${bodyY - 2}" width="${bandW}" height="${bodyH + 4}" fill="${c.hex}"/>`;
         });
 
+        const body = this.bodyColor(this.hasResistorBodyColorTarget ? this.resistorBodyColorTarget : null, "#d8c7a0");
+
         const svg = `
-        <svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" style="max-width: 420px; width: 100%; height: auto;">
-            <line x1="0" y1="${bodyY + bodyH / 2}" x2="${width}" y2="${bodyY + bodyH / 2}" stroke="#9a9a9a" stroke-width="4"/>
-            <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="14" ry="14" fill="${this.bodyColor(this.hasResistorBodyColorTarget ? this.resistorBodyColorTarget : null, "#d8c7a0")}" stroke="#0004" stroke-width="1.5"/>
-            ${bands}
+        <svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" style="max-width: 460px; width: 100%; height: auto;">
+            <defs>
+                ${this.leadGradient(uid)}
+                ${this.cylinderGradient(uid)}
+                <clipPath id="${uid}clip"><rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="20" ry="20"/></clipPath>
+                ${this.shadowFilter(uid)}
+            </defs>
+            <g filter="url(#${uid}shadow)">
+                <rect x="6" y="${cy - 5}" width="${width - 12}" height="10" rx="5" fill="url(#${uid}lead)"/>
+                <g clip-path="url(#${uid}clip)">
+                    <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" fill="${body}"/>
+                    ${bands}
+                    <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" fill="url(#${uid}cyl)"/>
+                </g>
+                <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="20" ry="20" fill="none" stroke="#00000055" stroke-width="1"/>
+            </g>
         </svg>`;
         this.resistorSvgTarget.innerHTML = svg;
     }
@@ -445,28 +461,46 @@ export default class extends Controller {
         return significant.toString().padStart(2, "0") + exp.toString();
     }
 
-    /** Draws a simple ceramic (radial) capacitor with the marking printed on it. */
+    /** Draws a glossy 3D ceramic (radial) capacitor with the marking on it. */
     drawCapacitor(target, marking) {
-        const w = 220;
-        const h = 150;
+        const uid = this.svgId();
+        const w = 230;
+        const h = 165;
         const cx = w / 2;
-        const bodyTop = 16;
-        const bodyW = 130;
-        const bodyH = 84;
+        const bodyTop = 14;
+        const bodyW = 150;
+        const bodyH = 100;
         const bodyX = cx - bodyW / 2;
         const bodyBottom = bodyTop + bodyH;
-        const fontSize = marking.length > 4 ? 24 : 30;
+        const cyBody = bodyTop + bodyH / 2;
+        const rx = bodyH / 2;
+        const fontSize = marking.length > 4 ? 26 : 32;
         const fill = this.bodyColor(this.hasCapBodyColorTarget ? this.capBodyColorTarget : null, "#c9a227");
         const textColor = this.contrastColor(fill);
+        const shadow = textColor === "#f5f5f5" ? "#00000088" : "#ffffff66";
 
         const svg = `
-        <svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" style="max-width: 240px; width: 100%; height: auto;">
-            <line x1="${cx - 26}" y1="${bodyBottom - 6}" x2="${cx - 26}" y2="${h - 8}" stroke="#9a9a9a" stroke-width="4"/>
-            <line x1="${cx + 26}" y1="${bodyBottom - 6}" x2="${cx + 26}" y2="${h - 8}" stroke="#9a9a9a" stroke-width="4"/>
-            <rect x="${bodyX}" y="${bodyTop}" width="${bodyW}" height="${bodyH}" rx="${bodyH / 2}" ry="${bodyH / 2}"
-                  fill="${fill}" stroke="#0005" stroke-width="1.5"/>
-            <text x="${cx}" y="${bodyTop + bodyH / 2}" text-anchor="middle" dominant-baseline="central"
-                  font-family="monospace" font-weight="bold" font-size="${fontSize}" fill="${textColor}">${marking}</text>
+        <svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" style="max-width: 250px; width: 100%; height: auto;">
+            <defs>
+                ${this.leadGradient(uid)}
+                ${this.glossGradient(uid)}
+                ${this.specularGradient(uid)}
+                <clipPath id="${uid}clip"><rect x="${bodyX}" y="${bodyTop}" width="${bodyW}" height="${bodyH}" rx="${rx}" ry="${rx}"/></clipPath>
+                ${this.shadowFilter(uid)}
+            </defs>
+            <g filter="url(#${uid}shadow)">
+                <rect x="${cx - 28}" y="${bodyBottom - 14}" width="8" height="${h - bodyBottom + 12}" rx="4" fill="url(#${uid}lead)"/>
+                <rect x="${cx + 20}" y="${bodyBottom - 14}" width="8" height="${h - bodyBottom + 12}" rx="4" fill="url(#${uid}lead)"/>
+                <g clip-path="url(#${uid}clip)">
+                    <rect x="${bodyX}" y="${bodyTop}" width="${bodyW}" height="${bodyH}" fill="${fill}"/>
+                    <rect x="${bodyX}" y="${bodyTop}" width="${bodyW}" height="${bodyH}" fill="url(#${uid}gloss)"/>
+                    <ellipse cx="${cx - 12}" cy="${bodyTop + bodyH * 0.32}" rx="${bodyW * 0.42}" ry="${bodyH * 0.26}" fill="url(#${uid}spec)"/>
+                </g>
+                <rect x="${bodyX}" y="${bodyTop}" width="${bodyW}" height="${bodyH}" rx="${rx}" ry="${rx}" fill="none" stroke="#00000055" stroke-width="1"/>
+                <text x="${cx}" y="${cyBody}" text-anchor="middle" dominant-baseline="central"
+                      font-family="monospace" font-weight="bold" font-size="${fontSize}"
+                      fill="${textColor}" style="paint-order:stroke" stroke="${shadow}" stroke-width="0.6">${marking}</text>
+            </g>
         </svg>`;
         target.innerHTML = svg;
     }
@@ -482,6 +516,67 @@ export default class extends Controller {
             this.capBodyColorTarget.value = event.currentTarget.dataset.color;
         }
         this.updateCapacitorColor();
+    }
+
+    /** Unique id prefix per drawn SVG, so gradient/filter ids never collide. */
+    svgId() {
+        this.svgSeq = (this.svgSeq || 0) + 1;
+        return `vc${this.svgSeq}_`;
+    }
+
+    /** Vertical metallic gradient used for component leads. */
+    leadGradient(uid) {
+        return `<linearGradient id="${uid}lead" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#9aa0a6"/>
+            <stop offset="0.45" stop-color="#f4f6f8"/>
+            <stop offset="0.55" stop-color="#e7eaed"/>
+            <stop offset="1" stop-color="#6f747a"/>
+        </linearGradient>`;
+    }
+
+    /** Vertical metallic gradient for SMD terminations. */
+    metalGradient(uid) {
+        return `<linearGradient id="${uid}metal" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#eef1f4"/>
+            <stop offset="0.5" stop-color="#c2c7cd"/>
+            <stop offset="1" stop-color="#9098a0"/>
+        </linearGradient>`;
+    }
+
+    /** Top-light / bottom-dark overlay that turns a flat shape into a cylinder. */
+    cylinderGradient(uid) {
+        return `<linearGradient id="${uid}cyl" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#ffffff" stop-opacity="0.55"/>
+            <stop offset="0.16" stop-color="#ffffff" stop-opacity="0.16"/>
+            <stop offset="0.46" stop-color="#ffffff" stop-opacity="0"/>
+            <stop offset="0.72" stop-color="#000000" stop-opacity="0.16"/>
+            <stop offset="1" stop-color="#000000" stop-opacity="0.42"/>
+        </linearGradient>`;
+    }
+
+    /** Softer top-gloss overlay for caps and SMD bodies. */
+    glossGradient(uid) {
+        return `<linearGradient id="${uid}gloss" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#ffffff" stop-opacity="0.4"/>
+            <stop offset="0.4" stop-color="#ffffff" stop-opacity="0.05"/>
+            <stop offset="0.62" stop-color="#000000" stop-opacity="0"/>
+            <stop offset="1" stop-color="#000000" stop-opacity="0.32"/>
+        </linearGradient>`;
+    }
+
+    /** Radial highlight used as a specular reflection on the cap body. */
+    specularGradient(uid) {
+        return `<radialGradient id="${uid}spec" cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0" stop-color="#ffffff" stop-opacity="0.5"/>
+            <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+        </radialGradient>`;
+    }
+
+    /** Soft drop shadow filter. */
+    shadowFilter(uid) {
+        return `<filter id="${uid}shadow" x="-10%" y="-15%" width="120%" height="145%">
+            <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000000" flood-opacity="0.3"/>
+        </filter>`;
     }
 
     /** Returns the value of a color input, falling back to a default. */
@@ -557,27 +652,39 @@ export default class extends Controller {
         this.decodeSmd();
     }
 
-    /** Draws an SMD chip resistor with the marking printed on the body. */
+    /** Draws a 3D-shaded SMD chip resistor with the marking printed on the body. */
     drawSmd(marking) {
-        const w = 260;
-        const h = 130;
-        const bodyX = 30;
-        const bodyY = 30;
-        const bodyW = 200;
-        const bodyH = 70;
-        const capW = 22;
+        const uid = this.svgId();
+        const w = 270;
+        const h = 140;
+        const bodyX = 34;
+        const bodyY = 34;
+        const bodyW = 202;
+        const bodyH = 72;
+        const capW = 26;
         const cx = bodyX + bodyW / 2;
         const cy = bodyY + bodyH / 2;
-        const fontSize = marking.length > 4 ? 26 : 32;
+        const fontSize = marking.length > 4 ? 28 : 34;
         const fill = this.bodyColor(this.hasSmdBodyColorTarget ? this.smdBodyColorTarget : null, "#262626");
         const textColor = this.contrastColor(fill);
 
         const svg = `
-        <svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" style="max-width: 280px; width: 100%; height: auto;">
-            <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="6" ry="6" fill="#c8ccd0" stroke="#0005" stroke-width="1.5"/>
-            <rect x="${bodyX + capW}" y="${bodyY}" width="${bodyW - 2 * capW}" height="${bodyH}" fill="${fill}"/>
-            <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central"
-                  font-family="monospace" font-weight="bold" font-size="${fontSize}" fill="${textColor}">${marking}</text>
+        <svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" style="max-width: 290px; width: 100%; height: auto;">
+            <defs>
+                ${this.metalGradient(uid)}
+                ${this.glossGradient(uid)}
+                <clipPath id="${uid}clip"><rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="8" ry="8"/></clipPath>
+                ${this.shadowFilter(uid)}
+            </defs>
+            <g filter="url(#${uid}shadow)">
+                <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="8" ry="8" fill="url(#${uid}metal)" stroke="#00000055" stroke-width="1"/>
+                <g clip-path="url(#${uid}clip)">
+                    <rect x="${bodyX + capW}" y="${bodyY}" width="${bodyW - 2 * capW}" height="${bodyH}" fill="${fill}"/>
+                    <rect x="${bodyX + capW}" y="${bodyY}" width="${bodyW - 2 * capW}" height="${bodyH}" fill="url(#${uid}gloss)"/>
+                </g>
+                <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central"
+                      font-family="monospace" font-weight="bold" font-size="${fontSize}" fill="${textColor}">${marking}</text>
+            </g>
         </svg>`;
         this.smdSvgTarget.innerHTML = svg;
     }
