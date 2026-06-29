@@ -12629,6 +12629,42 @@ Buerklin-API Authentication server:
         <target>6 bands</target>
       </segment>
     </unit>
+    <unit id="vcalc_size" name="tools.value_calc.size">
+      <segment state="translated">
+        <source>tools.value_calc.size</source>
+        <target>Size</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_r_power" name="tools.value_calc.resistor.power">
+      <segment state="translated">
+        <source>tools.value_calc.resistor.power</source>
+        <target>Power rating</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_smd_package" name="tools.value_calc.smd.package">
+      <segment state="translated">
+        <source>tools.value_calc.smd.package</source>
+        <target>Package size</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_cap_diameter" name="tools.value_calc.cap.diameter">
+      <segment state="translated">
+        <source>tools.value_calc.cap.diameter</source>
+        <target>Diameter</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_cap_pitch" name="tools.value_calc.cap.pitch">
+      <segment state="translated">
+        <source>tools.value_calc.cap.pitch</source>
+        <target>Pitch</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_cap_voltage" name="tools.value_calc.cap.voltage">
+      <segment state="translated">
+        <source>tools.value_calc.cap.voltage</source>
+        <target>Voltage</target>
+      </segment>
+    </unit>
     <unit id="vcalc_r_result" name="tools.value_calc.resistor.result">
       <segment state="translated">
         <source>tools.value_calc.resistor.result</source>

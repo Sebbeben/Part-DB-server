@@ -28,11 +28,27 @@
         <div class="tab-content">
             {# ---------------- Resistor color code ---------------- #}
             <div class="tab-pane fade show active" id="vc-resistor" role="tabpanel">
-                <div class="row mb-3">
+                <div class="row mb-2">
                     <div class="col-12">
                         <div class="svg-container text-center">{{ '' }}
                             <div {{ stimulus_target('pages/valueCalculator', 'resistorSvg') }}></div>
                         </div>
+                        <div class="text-center text-muted small mb-2" {{ stimulus_target('pages/valueCalculator', 'resistorSpec') }}></div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <label for="vc-resistor-power" class="col-sm-3 col-form-label">{% trans %}tools.value_calc.resistor.power{% endtrans %}</label>
+                    <div class="col-sm-9">
+                        <select class="form-select" id="vc-resistor-power"
+                                {{ stimulus_target('pages/valueCalculator', 'resistorPower') }}
+                                {{ stimulus_action('pages/valueCalculator', 'updateResistor', 'change') }}>
+                            <option value="0.125">1/8 W</option>
+                            <option value="0.25" selected>1/4 W</option>
+                            <option value="0.5">1/2 W</option>
+                            <option value="1">1 W</option>
+                            <option value="2">2 W</option>
+                        </select>
                     </div>
                 </div>
 
@@ -123,6 +139,36 @@
                         </div>
                     </div>
                 </div>
+                <div class="row mb-3 align-items-center">
+                    <label for="vc-cap-diameter" class="col-sm-3 col-form-label">{% trans %}tools.value_calc.size{% endtrans %}</label>
+                    <div class="col-sm-9 d-flex align-items-center flex-wrap gap-3">
+                        <div class="input-group" style="width: auto;">
+                            <span class="input-group-text">{% trans %}tools.value_calc.cap.diameter{% endtrans %}</span>
+                            <input type="number" class="form-control" id="vc-cap-diameter" value="5" min="1" step="0.5" style="width: 5rem;"
+                                   {{ stimulus_target('pages/valueCalculator', 'capDiameter') }}
+                                   {{ stimulus_action('pages/valueCalculator', 'updateCapDimensions', 'input') }}>
+                            <span class="input-group-text">mm</span>
+                        </div>
+                        <div class="input-group" style="width: auto;">
+                            <span class="input-group-text">{% trans %}tools.value_calc.cap.pitch{% endtrans %}</span>
+                            <select class="form-select" id="vc-cap-pitch" style="width: 8rem;"
+                                    {{ stimulus_target('pages/valueCalculator', 'capPitch') }}
+                                    {{ stimulus_action('pages/valueCalculator', 'updateCapDimensions', 'change') }}>
+                                <option value="2.54">2.54 mm (0.1")</option>
+                                <option value="5.08" selected>5.08 mm (0.2")</option>
+                                <option value="7.5">7.5 mm</option>
+                            </select>
+                        </div>
+                        <div class="input-group" style="width: auto;">
+                            <span class="input-group-text">{% trans %}tools.value_calc.cap.voltage{% endtrans %}</span>
+                            <input type="number" class="form-control" id="vc-cap-voltage" placeholder="50" min="1" step="1" style="width: 5rem;"
+                                   {{ stimulus_target('pages/valueCalculator', 'capVoltage') }}
+                                   {{ stimulus_action('pages/valueCalculator', 'updateCapDimensions', 'input') }}>
+                            <span class="input-group-text">V</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-muted small mb-3" {{ stimulus_target('pages/valueCalculator', 'capSpec') }}></div>
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <h5>{% trans %}tools.value_calc.capacitor.decode_title{% endtrans %}</h5>
@@ -163,6 +209,23 @@
                     </div>
                 </div>
                 <div class="row mb-3">
+                    <label for="vc-smd-package" class="col-sm-3 col-form-label">{% trans %}tools.value_calc.smd.package{% endtrans %}</label>
+                    <div class="col-sm-9">
+                        <select class="form-select" id="vc-smd-package"
+                                {{ stimulus_target('pages/valueCalculator', 'smdPackage') }}
+                                {{ stimulus_action('pages/valueCalculator', 'decodeSmd', 'change') }}>
+                            <option value="0201">0201 (0603 metric)</option>
+                            <option value="0402">0402 (1005 metric)</option>
+                            <option value="0603">0603 (1608 metric)</option>
+                            <option value="0805" selected>0805 (2012 metric)</option>
+                            <option value="1206">1206 (3216 metric)</option>
+                            <option value="1210">1210 (3225 metric)</option>
+                            <option value="2010">2010 (5025 metric)</option>
+                            <option value="2512">2512 (6332 metric)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row mb-3">
                     <label for="vc-smd-body" class="col-sm-3 col-form-label">{% trans %}tools.value_calc.body_color{% endtrans %}</label>
                     <div class="col-sm-9 d-flex align-items-center flex-wrap gap-2">
                         <input type="color" class="form-control form-control-color" id="vc-smd-body" value="#262626"
@@ -179,7 +242,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="text-center mb-2" {{ stimulus_target('pages/valueCalculator', 'smdSvg') }}></div>
+                <div class="text-center mb-1" {{ stimulus_target('pages/valueCalculator', 'smdSvg') }}></div>
+                <div class="text-center text-muted small mb-2" {{ stimulus_target('pages/valueCalculator', 'smdSpec') }}></div>
                 <div class="alert alert-secondary" {{ stimulus_target('pages/valueCalculator', 'smdResult') }}></div>
             </div>
         </div>

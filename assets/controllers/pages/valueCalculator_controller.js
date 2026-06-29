@@ -62,12 +62,45 @@ const EIA96_MULTIPLIERS = {
     Z: 0.001, Y: 0.01, R: 0.01, X: 0.1, S: 0.1, A: 1, B: 10, C: 100, D: 1000, E: 10000, F: 100000,
 };
 
+// Typical dimensions of axial THT resistors per power rating.
+// len/dia = body length and diameter (mm), pitch = typical lead spacing (mm).
+const RESISTOR_POWERS = {
+    "0.125": {label: "1/8 W", len: 3.4, dia: 1.9, pitch: 7.62, pitchIn: "0.3\""},
+    "0.25": {label: "1/4 W", len: 6.3, dia: 2.4, pitch: 10.16, pitchIn: "0.4\""},
+    "0.5": {label: "1/2 W", len: 9.0, dia: 3.2, pitch: 12.7, pitchIn: "0.5\""},
+    "1": {label: "1 W", len: 11.5, dia: 4.5, pitch: 15.24, pitchIn: "0.6\""},
+    "2": {label: "2 W", len: 15.5, dia: 5.0, pitch: 20.32, pitchIn: "0.8\""},
+};
+
+// Standard SMD (chip) packages: imperial code -> metric code, size (mm), power (W).
+const SMD_PACKAGES = {
+    "0201": {metric: "0603", l: 0.6, w: 0.3, power: 0.05},
+    "0402": {metric: "1005", l: 1.0, w: 0.5, power: 0.063},
+    "0603": {metric: "1608", l: 1.6, w: 0.8, power: 0.1},
+    "0805": {metric: "2012", l: 2.0, w: 1.25, power: 0.125},
+    "1206": {metric: "3216", l: 3.2, w: 1.6, power: 0.25},
+    "1210": {metric: "3225", l: 3.2, w: 2.5, power: 0.33},
+    "2010": {metric: "5025", l: 5.0, w: 2.5, power: 0.5},
+    "2512": {metric: "6332", l: 6.3, w: 3.2, power: 1.0},
+};
+
+// Common lead pitches for radial ceramic capacitors.
+const CAP_PITCHES = {
+    "2.54": "0.1\"",
+    "5.08": "0.2\"",
+    "7.5": "",
+};
+
+const DIM_COLOR = "#6b7280";
+
 export default class extends Controller {
     static targets = [
         "resistorSvg", "bandSelects", "resistorResult", "resistorValueInput", "resistorBodyColor",
+        "resistorPower", "resistorSpec",
         "capCodeInput", "capDecodeResult", "capDecodeSvg",
         "capValueInput", "capEncodeResult", "capEncodeSvg", "capBodyColor",
-        "smdCodeInput", "smdResult", "smdSvg", "smdBodyColor",
+        "capPitch", "capDiameter", "capVoltage", "capSpec",
+        "smdCodeInput", "smdResult", "smdSvg", "smdBodyColor", "smdPackage", "smdSpec",
     ];
 
     connect() {
@@ -76,6 +109,7 @@ export default class extends Controller {
         // Sensible default: 4.7 kΩ ±1%
         this.setBandsFromValue(4700, 1);
         this.updateResistor();
+        this.updateCapSpec();
     }
 
     /*
@@ -286,16 +320,17 @@ export default class extends Controller {
         this.updateResistor();
     }
 
-    /** Draws a 3D-shaded axial resistor SVG with the given band colors. */
+    /** Draws a 3D-shaded axial resistor SVG with bands and dimension callouts. */
     drawResistor(colors) {
         const uid = this.svgId();
         const width = 400;
-        const height = 140;
-        const cy = height / 2;
+        const height = 185;
+        const cy = 60;
         const bodyX = 96;
         const bodyW = 208;
         const bodyH = 66;
         const bodyY = cy - bodyH / 2;
+        const bodyBottom = bodyY + bodyH;
 
         // Distribute the bands across the body, leaving the tolerance band set apart
         const n = colors.length;
@@ -317,6 +352,11 @@ export default class extends Controller {
         });
 
         const body = this.bodyColor(this.hasResistorBodyColorTarget ? this.resistorBodyColorTarget : null, "#d8c7a0");
+        const dim = RESISTOR_POWERS[this.resistorPowerValue()];
+        const callouts =
+            this.dimH(bodyX, bodyX + bodyW, bodyBottom + 16, `L ${this.formatMm(dim.len)}`)
+            + this.dimH(36, width - 36, height - 14, `pitch ${this.formatMm(dim.pitch)} (${dim.pitchIn})`)
+            + this.dimV(bodyY, bodyBottom, width - 40, `⌀ ${this.formatMm(dim.dia)}`, bodyX + bodyW);
 
         const svg = `
         <svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" style="max-width: 460px; width: 100%; height: auto;">
@@ -328,7 +368,6 @@ export default class extends Controller {
                 <clipPath id="${uid}clip"><rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="20" ry="20"/></clipPath>
                 ${this.shadowFilter(uid)}
             </defs>
-            <ellipse cx="${width / 2}" cy="${cy + bodyH / 2 + 16}" rx="${bodyW / 2 + 6}" ry="7" fill="#000000" opacity="0.16" filter="url(#${uid}blur)"/>
             <g filter="url(#${uid}shadow)">
                 <rect x="6" y="${cy - 5}" width="${width - 12}" height="10" rx="5" fill="url(#${uid}lead)"/>
                 <g clip-path="url(#${uid}clip)">
@@ -340,8 +379,19 @@ export default class extends Controller {
                 </g>
                 <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="20" ry="20" fill="none" stroke="#00000055" stroke-width="1"/>
             </g>
+            ${callouts}
         </svg>`;
         this.resistorSvgTarget.innerHTML = svg;
+
+        if (this.hasResistorSpecTarget) {
+            this.resistorSpecTarget.textContent =
+                `${dim.label} · ${this.formatMm(dim.len)} × ⌀${this.formatMm(dim.dia)} · pitch ${this.formatMm(dim.pitch)} (${dim.pitchIn})`;
+        }
+    }
+
+    resistorPowerValue() {
+        const v = this.hasResistorPowerTarget ? this.resistorPowerTarget.value : "0.25";
+        return RESISTOR_POWERS[v] ? v : "0.25";
     }
 
     /*
@@ -466,25 +516,41 @@ export default class extends Controller {
         return significant.toString().padStart(2, "0") + exp.toString();
     }
 
-    /** Draws a glossy 3D ceramic (radial) capacitor with the marking on it. */
+    /** Draws a glossy 3D ceramic capacitor with the marking and dimension callouts. */
     drawCapacitor(target, marking) {
         const uid = this.svgId();
         const w = 230;
-        const h = 165;
+        const h = 205;
         const cx = w / 2;
-        const bodyTop = 14;
+        const bodyTop = 34;
         const bodyW = 150;
         const bodyH = 100;
         const bodyX = cx - bodyW / 2;
         const bodyBottom = bodyTop + bodyH;
         const cyBody = bodyTop + bodyH / 2;
         const rx = bodyH / 2;
-        const fontSize = marking.length > 4 ? 26 : 32;
         const fill = this.bodyColor(this.hasCapBodyColorTarget ? this.capBodyColorTarget : null, "#c9a227");
         const textColor = this.contrastColor(fill);
         const shadow = textColor === "#f5f5f5" ? "#00000088" : "#ffffff66";
 
-        const leadLen = h - bodyBottom + 12;
+        const voltage = this.capVoltageValue();
+        const codeY = voltage ? cyBody - 8 : cyBody;
+        const fontSize = marking.length > 4 ? 26 : 32;
+        const voltageSvg = voltage
+            ? `<text x="${cx}" y="${cyBody + 20}" text-anchor="middle" dominant-baseline="central"
+                     font-family="monospace" font-weight="bold" font-size="15" fill="${textColor}"
+                     style="paint-order:stroke" stroke="${shadow}" stroke-width="0.5">${voltage} V</text>`
+            : "";
+
+        const leadLen = h - bodyBottom - 24;
+        const diam = this.capDiameterValue();
+        const pitch = this.capPitchValue();
+        const pitchIn = CAP_PITCHES[pitch];
+        const pitchLabel = pitchIn ? `pitch ${this.formatMm(parseFloat(pitch))} (${pitchIn})` : `pitch ${this.formatMm(parseFloat(pitch))}`;
+        const callouts =
+            this.dimH(bodyX, bodyX + bodyW, bodyTop - 12, `⌀ ${this.formatMm(diam)}`)
+            + this.dimH(cx - 28, cx + 28, h - 12, pitchLabel);
+
         const svg = `
         <svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" style="max-width: 250px; width: 100%; height: auto;">
             <defs>
@@ -495,7 +561,6 @@ export default class extends Controller {
                 <clipPath id="${uid}clip"><rect x="${bodyX}" y="${bodyTop}" width="${bodyW}" height="${bodyH}" rx="${rx}" ry="${rx}"/></clipPath>
                 ${this.shadowFilter(uid)}
             </defs>
-            <ellipse cx="${cx}" cy="${h - 4}" rx="${bodyW * 0.4}" ry="6" fill="#000000" opacity="0.15" filter="url(#${uid}blur)"/>
             <g filter="url(#${uid}shadow)">
                 <rect x="${cx - 26}" y="${bodyBottom - 14}" width="8" height="${leadLen}" rx="4" fill="url(#${uid}lead)" transform="rotate(-7 ${cx - 22} ${bodyBottom - 10})"/>
                 <rect x="${cx + 18}" y="${bodyBottom - 14}" width="8" height="${leadLen}" rx="4" fill="url(#${uid}lead)" transform="rotate(7 ${cx + 22} ${bodyBottom - 10})"/>
@@ -507,16 +572,55 @@ export default class extends Controller {
                     <ellipse cx="${cx}" cy="${bodyBottom}" rx="${bodyW * 0.5}" ry="14" fill="#000000" opacity="0.14"/>
                 </g>
                 <rect x="${bodyX}" y="${bodyTop}" width="${bodyW}" height="${bodyH}" rx="${rx}" ry="${rx}" fill="none" stroke="#00000055" stroke-width="1"/>
-                <text x="${cx}" y="${cyBody}" text-anchor="middle" dominant-baseline="central"
+                <text x="${cx}" y="${codeY}" text-anchor="middle" dominant-baseline="central"
                       font-family="monospace" font-weight="bold" font-size="${fontSize}"
                       fill="${textColor}" style="paint-order:stroke" stroke="${shadow}" stroke-width="0.6">${marking}</text>
+                ${voltageSvg}
             </g>
+            ${callouts}
         </svg>`;
         target.innerHTML = svg;
+        this.updateCapSpec();
+    }
+
+    capPitchValue() {
+        const v = this.hasCapPitchTarget ? this.capPitchTarget.value : "5.08";
+        return CAP_PITCHES[v] !== undefined ? v : "5.08";
+    }
+
+    capDiameterValue() {
+        const v = this.hasCapDiameterTarget ? parseFloat(this.capDiameterTarget.value) : NaN;
+        return Number.isFinite(v) && v > 0 ? v : 5;
+    }
+
+    capVoltageValue() {
+        const v = this.hasCapVoltageTarget ? this.capVoltageTarget.value.trim() : "";
+        return /^\d+(\.\d+)?$/.test(v) ? v : "";
+    }
+
+    updateCapSpec() {
+        if (!this.hasCapSpecTarget) {
+            return;
+        }
+        const pitch = this.capPitchValue();
+        const pitchIn = CAP_PITCHES[pitch];
+        let spec = `⌀ ${this.formatMm(this.capDiameterValue())} · pitch ${this.formatMm(parseFloat(pitch))}${pitchIn ? ` (${pitchIn})` : ""}`;
+        const voltage = this.capVoltageValue();
+        if (voltage) {
+            spec += ` · ${voltage} V`;
+        }
+        this.capSpecTarget.textContent = spec;
     }
 
     /** Re-renders both capacitor pictures when the body color changes. */
     updateCapacitorColor() {
+        this.decodeCapacitor();
+        this.encodeCapacitor();
+    }
+
+    /** Updates the spec line and re-renders both capacitor pictures. */
+    updateCapDimensions() {
+        this.updateCapSpec();
         this.decodeCapacitor();
         this.encodeCapacitor();
     }
@@ -608,6 +712,47 @@ export default class extends Controller {
         </filter>`;
     }
 
+    /** Horizontal dimension line with end ticks, arrows and a centered label above. */
+    dimH(x1, x2, y, label) {
+        const t = 4;
+        return `<g stroke="${DIM_COLOR}" stroke-width="1" fill="${DIM_COLOR}" font-size="11" font-family="system-ui, Arial, sans-serif">
+            <line x1="${x1}" y1="${y - t}" x2="${x1}" y2="${y + t}"/>
+            <line x1="${x2}" y1="${y - t}" x2="${x2}" y2="${y + t}"/>
+            <line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}"/>
+            <polygon stroke="none" points="${x1},${y} ${x1 + 6},${y - 3} ${x1 + 6},${y + 3}"/>
+            <polygon stroke="none" points="${x2},${y} ${x2 - 6},${y - 3} ${x2 - 6},${y + 3}"/>
+            <text x="${(x1 + x2) / 2}" y="${y - 5}" text-anchor="middle" stroke="none">${label}</text>
+        </g>`;
+    }
+
+    /** Vertical dimension line (label centered above) with optional extension lines. */
+    dimV(y1, y2, x, label, extFromX = null) {
+        const t = 4;
+        const ext = extFromX === null ? "" :
+            `<line x1="${extFromX}" y1="${y1}" x2="${x + t}" y2="${y1}" stroke-dasharray="2 2"/>
+             <line x1="${extFromX}" y1="${y2}" x2="${x + t}" y2="${y2}" stroke-dasharray="2 2"/>`;
+        return `<g stroke="${DIM_COLOR}" stroke-width="1" fill="${DIM_COLOR}" font-size="11" font-family="system-ui, Arial, sans-serif">
+            ${ext}
+            <line x1="${x - t}" y1="${y1}" x2="${x + t}" y2="${y1}"/>
+            <line x1="${x - t}" y1="${y2}" x2="${x + t}" y2="${y2}"/>
+            <line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}"/>
+            <polygon stroke="none" points="${x},${y1} ${x - 3},${y1 + 6} ${x + 3},${y1 + 6}"/>
+            <polygon stroke="none" points="${x},${y2} ${x - 3},${y2 - 6} ${x + 3},${y2 - 6}"/>
+            <text x="${x}" y="${y1 - 6}" text-anchor="middle" stroke="none">${label}</text>
+        </g>`;
+    }
+
+    /** Formats a millimeter value without trailing zeros. */
+    formatMm(mm) {
+        return `${this.trimNumber(mm)} mm`;
+    }
+
+    /** Formats a power rating in watts, preferring the fractional label. */
+    formatPower(watts) {
+        const fractions = {0.125: "1/8 W", 0.25: "1/4 W", 0.33: "1/3 W", 0.5: "1/2 W"};
+        return fractions[watts] ?? `${this.trimNumber(watts)} W`;
+    }
+
     /** Returns the value of a color input, falling back to a default. */
     bodyColor(target, fallback) {
         return target && target.value ? target.value : fallback;
@@ -681,26 +826,33 @@ export default class extends Controller {
         this.decodeSmd();
     }
 
-    /** Draws a 3D-shaded SMD chip resistor with the marking printed on the body. */
+    /** Draws a 3D-shaded SMD chip resistor with marking and dimension callouts. */
     drawSmd(marking) {
         const uid = this.svgId();
-        const w = 270;
-        const h = 140;
-        const bodyX = 34;
-        const bodyY = 34;
+        const w = 290;
+        const h = 168;
+        const bodyX = 40;
+        const bodyY = 30;
         const bodyW = 202;
         const bodyH = 72;
         const capW = 26;
         const cx = bodyX + bodyW / 2;
         const cy = bodyY + bodyH / 2;
+        const bodyBottom = bodyY + bodyH;
         const fontSize = marking.length > 4 ? 28 : 34;
         const fill = this.bodyColor(this.hasSmdBodyColorTarget ? this.smdBodyColorTarget : null, "#262626");
         const textColor = this.contrastColor(fill);
 
         const innerX = bodyX + capW;
         const innerW = bodyW - 2 * capW;
+        const pkgKey = this.smdPackageValue();
+        const pkg = SMD_PACKAGES[pkgKey];
+        const callouts =
+            this.dimH(bodyX, bodyX + bodyW, bodyBottom + 16, `L ${this.formatMm(pkg.l)}`)
+            + this.dimV(bodyY, bodyBottom, w - 40, `W ${this.formatMm(pkg.w)}`, bodyX + bodyW);
+
         const svg = `
-        <svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" style="max-width: 290px; width: 100%; height: auto;">
+        <svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" style="max-width: 300px; width: 100%; height: auto;">
             <defs>
                 ${this.metalGradient(uid)}
                 ${this.glossGradient(uid)}
@@ -708,7 +860,6 @@ export default class extends Controller {
                 <clipPath id="${uid}clip"><rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="8" ry="8"/></clipPath>
                 ${this.shadowFilter(uid)}
             </defs>
-            <ellipse cx="${cx}" cy="${bodyY + bodyH + 14}" rx="${bodyW * 0.46}" ry="6" fill="#000000" opacity="0.16" filter="url(#${uid}blur)"/>
             <g filter="url(#${uid}shadow)">
                 <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="8" ry="8" fill="url(#${uid}metal)" stroke="#00000055" stroke-width="1"/>
                 <g clip-path="url(#${uid}clip)">
@@ -721,8 +872,19 @@ export default class extends Controller {
                 <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central"
                       font-family="monospace" font-weight="bold" font-size="${fontSize}" fill="${textColor}">${marking}</text>
             </g>
+            ${callouts}
         </svg>`;
         this.smdSvgTarget.innerHTML = svg;
+
+        if (this.hasSmdSpecTarget) {
+            this.smdSpecTarget.textContent =
+                `${pkgKey} (${pkg.metric}) · ${this.formatMm(pkg.l)} × ${this.formatMm(pkg.w)} · ${this.formatPower(pkg.power)}`;
+        }
+    }
+
+    smdPackageValue() {
+        const v = this.hasSmdPackageTarget ? this.smdPackageTarget.value : "0805";
+        return SMD_PACKAGES[v] ? v : "0805";
     }
 
     /*
