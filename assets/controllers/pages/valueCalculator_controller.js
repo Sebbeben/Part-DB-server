@@ -67,7 +67,7 @@ export default class extends Controller {
         "resistorSvg", "bandSelects", "resistorResult", "resistorValueInput", "resistorBodyColor",
         "capCodeInput", "capDecodeResult", "capDecodeSvg",
         "capValueInput", "capEncodeResult", "capEncodeSvg", "capBodyColor",
-        "smdCodeInput", "smdResult",
+        "smdCodeInput", "smdResult", "smdSvg", "smdBodyColor",
     ];
 
     connect() {
@@ -512,6 +512,7 @@ export default class extends Controller {
         const raw = (this.smdCodeInputTarget.value || "").trim().toUpperCase();
         if (raw === "") {
             this.smdResultTarget.textContent = "";
+            this.smdSvgTarget.innerHTML = "";
             return;
         }
 
@@ -537,9 +538,48 @@ export default class extends Controller {
 
         if (ohms === null || Number.isNaN(ohms)) {
             this.smdResultTarget.textContent = trans("tools.value_calc.invalid_input");
+            this.smdSvgTarget.innerHTML = "";
             return;
         }
         this.smdResultTarget.textContent = this.formatOhms(ohms);
+        this.drawSmd(raw);
+    }
+
+    /** Re-renders the SMD chip picture when the body color changes. */
+    updateSmdColor() {
+        this.decodeSmd();
+    }
+
+    applySmdBodyColor(event) {
+        if (this.hasSmdBodyColorTarget) {
+            this.smdBodyColorTarget.value = event.currentTarget.dataset.color;
+        }
+        this.decodeSmd();
+    }
+
+    /** Draws an SMD chip resistor with the marking printed on the body. */
+    drawSmd(marking) {
+        const w = 260;
+        const h = 130;
+        const bodyX = 30;
+        const bodyY = 30;
+        const bodyW = 200;
+        const bodyH = 70;
+        const capW = 22;
+        const cx = bodyX + bodyW / 2;
+        const cy = bodyY + bodyH / 2;
+        const fontSize = marking.length > 4 ? 26 : 32;
+        const fill = this.bodyColor(this.hasSmdBodyColorTarget ? this.smdBodyColorTarget : null, "#262626");
+        const textColor = this.contrastColor(fill);
+
+        const svg = `
+        <svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" style="max-width: 280px; width: 100%; height: auto;">
+            <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="6" ry="6" fill="#c8ccd0" stroke="#0005" stroke-width="1.5"/>
+            <rect x="${bodyX + capW}" y="${bodyY}" width="${bodyW - 2 * capW}" height="${bodyH}" fill="${fill}"/>
+            <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central"
+                  font-family="monospace" font-weight="bold" font-size="${fontSize}" fill="${textColor}">${marking}</text>
+        </svg>`;
+        this.smdSvgTarget.innerHTML = svg;
     }
 
     /*

@@ -162,6 +162,24 @@
                         </div>
                     </div>
                 </div>
+                <div class="row mb-3">
+                    <label for="vc-smd-body" class="col-sm-3 col-form-label">{% trans %}tools.value_calc.body_color{% endtrans %}</label>
+                    <div class="col-sm-9 d-flex align-items-center flex-wrap gap-2">
+                        <input type="color" class="form-control form-control-color" id="vc-smd-body" value="#262626"
+                               title="{% trans %}tools.value_calc.body_color{% endtrans %}"
+                               {{ stimulus_target('pages/valueCalculator', 'smdBodyColor') }}
+                               {{ stimulus_action('pages/valueCalculator', 'updateSmdColor', 'input') }}>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-secondary" data-color="#262626"
+                                    {{ stimulus_action('pages/valueCalculator', 'applySmdBodyColor') }}>{% trans %}tools.value_calc.body.black{% endtrans %}</button>
+                            <button type="button" class="btn btn-outline-secondary" data-color="#4a4a4a"
+                                    {{ stimulus_action('pages/valueCalculator', 'applySmdBodyColor') }}>{% trans %}tools.value_calc.body.grey{% endtrans %}</button>
+                            <button type="button" class="btn btn-outline-secondary" data-color="#e8e8e8"
+                                    {{ stimulus_action('pages/valueCalculator', 'applySmdBodyColor') }}>{% trans %}tools.value_calc.body.white{% endtrans %}</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-center mb-2" {{ stimulus_target('pages/valueCalculator', 'smdSvg') }}></div>
                 <div class="alert alert-secondary" {{ stimulus_target('pages/valueCalculator', 'smdResult') }}></div>
             </div>
         </div>

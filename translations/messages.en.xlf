@@ -12575,6 +12575,18 @@ Buerklin-API Authentication server:
         <target>Black</target>
       </segment>
     </unit>
+    <unit id="vcalc_body_grey" name="tools.value_calc.body.grey">
+      <segment state="translated">
+        <source>tools.value_calc.body.grey</source>
+        <target>Grey</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_body_white" name="tools.value_calc.body.white">
+      <segment state="translated">
+        <source>tools.value_calc.body.white</source>
+        <target>White</target>
+      </segment>
+    </unit>
     <unit id="vcalc_r_title" name="tools.value_calc.resistor.title">
       <segment state="translated">
         <source>tools.value_calc.resistor.title</source>
