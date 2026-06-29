@@ -1,0 +1,127 @@
+{% extends "main_card.html.twig" %}
+
+{% block title %}{% trans %}tools.value_calc.title{% endtrans %}{% endblock %}
+
+{% block card_title %}
+    <i class="fas fa-palette"></i> {% trans %}tools.value_calc.title{% endtrans %}
+{% endblock %}
+
+{% block card_content %}
+    <p class="text-muted">{% trans %}tools.value_calc.explanation{% endtrans %}</p>
+
+    <div {{ stimulus_controller('pages/valueCalculator') }}>
+        <ul class="nav nav-tabs mb-3" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="vc-resistor-tab" data-bs-toggle="tab" data-bs-target="#vc-resistor"
+                        type="button" role="tab">{% trans %}tools.value_calc.resistor.title{% endtrans %}</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="vc-capacitor-tab" data-bs-toggle="tab" data-bs-target="#vc-capacitor"
+                        type="button" role="tab">{% trans %}tools.value_calc.capacitor.title{% endtrans %}</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="vc-smd-tab" data-bs-toggle="tab" data-bs-target="#vc-smd"
+                        type="button" role="tab">{% trans %}tools.value_calc.smd.title{% endtrans %}</button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            {# ---------------- Resistor color code ---------------- #}
+            <div class="tab-pane fade show active" id="vc-resistor" role="tabpanel">
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <div class="svg-container text-center">{{ '' }}
+                            <div {{ stimulus_target('pages/valueCalculator', 'resistorSvg') }}></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <label class="col-sm-3 col-form-label">{% trans %}tools.value_calc.resistor.bands{% endtrans %}</label>
+                    <div class="col-sm-9">
+                        <div class="btn-group" role="group" {{ stimulus_target('pages/valueCalculator', 'bandCountGroup') }}>
+                            <input type="radio" class="btn-check" name="vc-band-count" id="vc-band-4" value="4"
+                                   autocomplete="off" {{ stimulus_action('pages/valueCalculator', 'changeBandCount', 'change') }}>
+                            <label class="btn btn-outline-primary" for="vc-band-4">{% trans %}tools.value_calc.resistor.bands_4{% endtrans %}</label>
+
+                            <input type="radio" class="btn-check" name="vc-band-count" id="vc-band-5" value="5"
+                                   autocomplete="off" checked {{ stimulus_action('pages/valueCalculator', 'changeBandCount', 'change') }}>
+                            <label class="btn btn-outline-primary" for="vc-band-5">{% trans %}tools.value_calc.resistor.bands_5{% endtrans %}</label>
+
+                            <input type="radio" class="btn-check" name="vc-band-count" id="vc-band-6" value="6"
+                                   autocomplete="off" {{ stimulus_action('pages/valueCalculator', 'changeBandCount', 'change') }}>
+                            <label class="btn btn-outline-primary" for="vc-band-6">{% trans %}tools.value_calc.resistor.bands_6{% endtrans %}</label>
+                        </div>
+                    </div>
+                </div>
+
+                {# Band color selects are rendered by the Stimulus controller #}
+                <div class="row mb-3" {{ stimulus_target('pages/valueCalculator', 'bandSelects') }}></div>
+
+                <div class="row mb-3">
+                    <label class="col-sm-3 col-form-label fw-bold">{% trans %}tools.value_calc.resistor.result{% endtrans %}</label>
+                    <div class="col-sm-9">
+                        <span class="form-control-plaintext fs-5" {{ stimulus_target('pages/valueCalculator', 'resistorResult') }}></span>
+                    </div>
+                </div>
+
+                <hr>
+                <p class="text-muted">{% trans %}tools.value_calc.resistor.from_value_help{% endtrans %}</p>
+                <div class="row mb-3">
+                    <label for="vc-resistor-value" class="col-sm-3 col-form-label">{% trans %}tools.value_calc.resistor.from_value{% endtrans %}</label>
+                    <div class="col-sm-6">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="vc-resistor-value" placeholder="4k7"
+                                   {{ stimulus_target('pages/valueCalculator', 'resistorValueInput') }}
+                                   {{ stimulus_action('pages/valueCalculator', 'applyResistorValue', 'keyup.enter') }}>
+                            <button class="btn btn-primary" type="button"
+                                    {{ stimulus_action('pages/valueCalculator', 'applyResistorValue') }}>{% trans %}tools.value_calc.resistor.apply_value{% endtrans %}</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# ---------------- Capacitor code ---------------- #}
+            <div class="tab-pane fade" id="vc-capacitor" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <h5>{% trans %}tools.value_calc.capacitor.decode_title{% endtrans %}</h5>
+                        <p class="text-muted">{% trans %}tools.value_calc.capacitor.decode_help{% endtrans %}</p>
+                        <div class="input-group mb-2">
+                            <input type="text" class="form-control" placeholder="104K"
+                                   {{ stimulus_target('pages/valueCalculator', 'capCodeInput') }}
+                                   {{ stimulus_action('pages/valueCalculator', 'decodeCapacitor', 'input') }}>
+                        </div>
+                        <div class="alert alert-secondary" {{ stimulus_target('pages/valueCalculator', 'capDecodeResult') }}></div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <h5>{% trans %}tools.value_calc.capacitor.encode_title{% endtrans %}</h5>
+                        <p class="text-muted">{% trans %}tools.value_calc.capacitor.encode_help{% endtrans %}</p>
+                        <div class="input-group mb-2">
+                            <input type="text" class="form-control" placeholder="100nF"
+                                   {{ stimulus_target('pages/valueCalculator', 'capValueInput') }}
+                                   {{ stimulus_action('pages/valueCalculator', 'encodeCapacitor', 'input') }}>
+                        </div>
+                        <div class="alert alert-secondary" {{ stimulus_target('pages/valueCalculator', 'capEncodeResult') }}></div>
+                    </div>
+                </div>
+            </div>
+
+            {# ---------------- SMD resistor code ---------------- #}
+            <div class="tab-pane fade" id="vc-smd" role="tabpanel">
+                <h5>{% trans %}tools.value_calc.smd.decode_title{% endtrans %}</h5>
+                <p class="text-muted">{% trans %}tools.value_calc.smd.decode_help{% endtrans %}</p>
+                <div class="row mb-3">
+                    <div class="col-sm-6">
+                        <div class="input-group">
+                            <input type="text" class="form-control" placeholder="4R7"
+                                   {{ stimulus_target('pages/valueCalculator', 'smdCodeInput') }}
+                                   {{ stimulus_action('pages/valueCalculator', 'decodeSmd', 'input') }}>
+                        </div>
+                    </div>
+                </div>
+                <div class="alert alert-secondary" {{ stimulus_target('pages/valueCalculator', 'smdResult') }}></div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

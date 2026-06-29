@@ -129,4 +129,12 @@ class ToolsController extends AbstractController
 
         return $this->render('tools/ic_logos/ic_logos.html.twig');
     }
+
+    #[Route(path: '/value_calc', name: 'tools_value_calculator')]
+    public function valueCalculator(): Response
+    {
+        $this->denyAccessUnlessGranted('@tools.value_calculator');
+
+        return $this->render('tools/value_calculator/value_calculator.html.twig');
+    }
 }

@@ -12509,5 +12509,125 @@ Buerklin-API Authentication server:
         <target>Last stocktake</target>
       </segment>
     </unit>
+    <unit id="vcalc_perm" name="perm.tools.value_calculator">
+      <segment state="translated">
+        <source>perm.tools.value_calculator</source>
+        <target>Resistor &amp; capacitor calculator</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_title" name="tools.value_calc.title">
+      <segment state="translated">
+        <source>tools.value_calc.title</source>
+        <target>Resistor &amp; capacitor calculator</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_explanation" name="tools.value_calc.explanation">
+      <segment state="translated">
+        <source>tools.value_calc.explanation</source>
+        <target>Decode and visualize resistor color bands, capacitor codes and SMD resistor markings. Pick the band colors to read a resistor, or enter a value to generate the matching color code.</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_r_title" name="tools.value_calc.resistor.title">
+      <segment state="translated">
+        <source>tools.value_calc.resistor.title</source>
+        <target>Resistor color code</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_c_title" name="tools.value_calc.capacitor.title">
+      <segment state="translated">
+        <source>tools.value_calc.capacitor.title</source>
+        <target>Capacitor code</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_s_title" name="tools.value_calc.smd.title">
+      <segment state="translated">
+        <source>tools.value_calc.smd.title</source>
+        <target>SMD resistor code</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_r_bands" name="tools.value_calc.resistor.bands">
+      <segment state="translated">
+        <source>tools.value_calc.resistor.bands</source>
+        <target>Number of bands</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_r_bands4" name="tools.value_calc.resistor.bands_4">
+      <segment state="translated">
+        <source>tools.value_calc.resistor.bands_4</source>
+        <target>4 bands</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_r_bands5" name="tools.value_calc.resistor.bands_5">
+      <segment state="translated">
+        <source>tools.value_calc.resistor.bands_5</source>
+        <target>5 bands</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_r_bands6" name="tools.value_calc.resistor.bands_6">
+      <segment state="translated">
+        <source>tools.value_calc.resistor.bands_6</source>
+        <target>6 bands</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_r_result" name="tools.value_calc.resistor.result">
+      <segment state="translated">
+        <source>tools.value_calc.resistor.result</source>
+        <target>Resistance</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_r_fromvalhelp" name="tools.value_calc.resistor.from_value_help">
+      <segment state="translated">
+        <source>tools.value_calc.resistor.from_value_help</source>
+        <target>Enter a resistance value to generate the color bands. You can use suffixes like k, M and the RKM notation (e.g. 4k7).</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_r_fromval" name="tools.value_calc.resistor.from_value">
+      <segment state="translated">
+        <source>tools.value_calc.resistor.from_value</source>
+        <target>Value to color code</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_r_apply" name="tools.value_calc.resistor.apply_value">
+      <segment state="translated">
+        <source>tools.value_calc.resistor.apply_value</source>
+        <target>Generate bands</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_c_dectitle" name="tools.value_calc.capacitor.decode_title">
+      <segment state="translated">
+        <source>tools.value_calc.capacitor.decode_title</source>
+        <target>Code → value</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_c_dechelp" name="tools.value_calc.capacitor.decode_help">
+      <segment state="translated">
+        <source>tools.value_calc.capacitor.decode_help</source>
+        <target>Enter a printed capacitor code, optionally with a tolerance letter (e.g. 104K).</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_c_enctitle" name="tools.value_calc.capacitor.encode_title">
+      <segment state="translated">
+        <source>tools.value_calc.capacitor.encode_title</source>
+        <target>Value → code</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_c_enchelp" name="tools.value_calc.capacitor.encode_help">
+      <segment state="translated">
+        <source>tools.value_calc.capacitor.encode_help</source>
+        <target>Enter a capacitance (e.g. 100nF) to get the 3-digit code.</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_s_dectitle" name="tools.value_calc.smd.decode_title">
+      <segment state="translated">
+        <source>tools.value_calc.smd.decode_title</source>
+        <target>SMD code → value</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_s_dechelp" name="tools.value_calc.smd.decode_help">
+      <segment state="translated">
+        <source>tools.value_calc.smd.decode_help</source>
+        <target>Enter an SMD resistor marking. Supports 3-digit (472), 4-digit (4701), R-notation (4R7) and EIA-96 (01C) codes.</target>
+      </segment>
+    </unit>
   </file>
 </xliff>
