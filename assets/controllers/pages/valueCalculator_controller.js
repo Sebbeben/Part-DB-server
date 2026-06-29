@@ -65,7 +65,8 @@ const EIA96_MULTIPLIERS = {
 export default class extends Controller {
     static targets = [
         "resistorSvg", "bandSelects", "resistorResult", "resistorValueInput",
-        "capCodeInput", "capDecodeResult", "capValueInput", "capEncodeResult",
+        "capCodeInput", "capDecodeResult", "capDecodeSvg",
+        "capValueInput", "capEncodeResult", "capEncodeSvg",
         "smdCodeInput", "smdResult",
     ];
 
@@ -325,32 +326,24 @@ export default class extends Controller {
         const raw = (this.capCodeInputTarget.value || "").trim().toUpperCase();
         if (raw === "") {
             this.capDecodeResultTarget.textContent = "";
+            this.capDecodeSvgTarget.innerHTML = "";
             return;
         }
 
-        // Optional trailing tolerance letter
-        const match = raw.match(/^(\d{1,3})\s*([A-Z])?$/);
-        if (!match) {
+        // Split off an optional trailing tolerance letter (e.g. the K in 104K)
+        let body = raw;
+        let tolLetter = null;
+        const letterMatch = raw.match(/^([0-9R]+)([A-Z])$/);
+        if (letterMatch) {
+            body = letterMatch[1];
+            tolLetter = letterMatch[2];
+        }
+
+        const pf = this.capCodeToPf(body);
+        if (pf === null) {
             this.capDecodeResultTarget.textContent = trans("tools.value_calc.invalid_input");
+            this.capDecodeSvgTarget.innerHTML = "";
             return;
-        }
-        const code = match[1];
-        const tolLetter = match[2];
-
-        let pf;
-        if (code.length <= 2) {
-            // Two-digit codes are the value directly in pF
-            pf = parseInt(code, 10);
-        } else {
-            const significant = parseInt(code.substring(0, 2), 10);
-            const mult = parseInt(code.charAt(2), 10);
-            if (mult === 8) {
-                pf = significant * 0.01;
-            } else if (mult === 9) {
-                pf = significant * 0.1;
-            } else {
-                pf = significant * Math.pow(10, mult);
-            }
         }
 
         let text = `${this.formatFarads(pf)} (${this.formatFarads(pf, true)})`;
@@ -360,6 +353,37 @@ export default class extends Controller {
             text += ` · ${trans("tools.value_calc.unknown_tolerance")} "${tolLetter}"`;
         }
         this.capDecodeResultTarget.textContent = text;
+        this.drawCapacitor(this.capDecodeSvgTarget, body + (tolLetter ?? ""));
+    }
+
+    /**
+     * Converts a printed ceramic/film capacitor code into picofarads.
+     * Supports R-notation (4R7 = 4.7 pF), plain 1-2 digit values (47 = 47 pF)
+     * and the 3-digit EIA code (104 = 100 nF, with 8/9 as ×0.01/×0.1).
+     * Returns null when the code can't be parsed.
+     */
+    capCodeToPf(code) {
+        if (/^\d*R\d*$/.test(code) && code.includes("R")) {
+            // R-notation, e.g. 4R7 = 4.7 pF, R47 = 0.47 pF
+            const val = parseFloat(code.replace("R", "."));
+            return Number.isNaN(val) ? null : val;
+        }
+        if (/^\d{1,2}$/.test(code)) {
+            // Plain value directly in pF (typical for caps below 100 pF)
+            return parseInt(code, 10);
+        }
+        if (/^\d{3}$/.test(code)) {
+            const significant = parseInt(code.substring(0, 2), 10);
+            const mult = parseInt(code.charAt(2), 10);
+            if (mult === 8) {
+                return significant * 0.01;
+            }
+            if (mult === 9) {
+                return significant * 0.1;
+            }
+            return significant * Math.pow(10, mult);
+        }
+        return null;
     }
 
     encodeCapacitor() {
@@ -368,10 +392,39 @@ export default class extends Controller {
         if (farads === null || !(farads > 0)) {
             this.capEncodeResultTarget.textContent = raw.trim() === ""
                 ? "" : trans("tools.value_calc.invalid_input");
+            this.capEncodeSvgTarget.innerHTML = "";
             return;
         }
         const pf = farads * 1e12;
+        const code = this.pfToCapCode(pf);
 
+        if (code === null) {
+            this.capEncodeResultTarget.textContent = trans("tools.value_calc.out_of_range");
+            this.capEncodeSvgTarget.innerHTML = "";
+            return;
+        }
+        this.capEncodeResultTarget.textContent =
+            `${trans("tools.value_calc.capacitor.code")}: ${code} (${this.formatFarads(pf)})`;
+        this.drawCapacitor(this.capEncodeSvgTarget, code);
+    }
+
+    /**
+     * Returns the marking that is typically printed on a ceramic capacitor for
+     * the given value in picofarads: R-notation below 10 pF, the plain value
+     * for 10-99 pF, and the 3-digit EIA code from 100 pF upwards.
+     */
+    pfToCapCode(pf) {
+        if (pf < 10) {
+            // R-notation, e.g. 4.7 -> 4R7, 0.47 -> R47
+            const s = parseFloat(pf.toFixed(2)).toString();
+            if (Number.isInteger(pf)) {
+                return s;
+            }
+            return s.startsWith("0.") ? "R" + s.slice(2) : s.replace(".", "R");
+        }
+        if (pf < 100) {
+            return Math.round(pf).toString();
+        }
         // Two significant figures + power-of-ten multiplier digit
         let exp = Math.floor(Math.log10(pf)) - 1;
         let significant = Math.round(pf / Math.pow(10, exp));
@@ -379,19 +432,34 @@ export default class extends Controller {
             significant = Math.round(significant / 10);
             exp += 1;
         }
-
-        let code;
-        if (pf < 10) {
-            // Small caps: show the value, EIA code is uncommon here
-            code = trans("tools.value_calc.capacitor.small_value");
-        } else if (exp < 0 || exp > 7) {
-            code = trans("tools.value_calc.out_of_range");
-        } else {
-            code = significant.toString().padStart(2, "0") + exp.toString();
+        if (exp < 0 || exp > 7) {
+            return null;
         }
+        return significant.toString().padStart(2, "0") + exp.toString();
+    }
 
-        this.capEncodeResultTarget.textContent =
-            `${trans("tools.value_calc.capacitor.code")}: ${code} (${this.formatFarads(pf)})`;
+    /** Draws a simple ceramic (radial) capacitor with the marking printed on it. */
+    drawCapacitor(target, marking) {
+        const w = 220;
+        const h = 150;
+        const cx = w / 2;
+        const bodyTop = 16;
+        const bodyW = 130;
+        const bodyH = 84;
+        const bodyX = cx - bodyW / 2;
+        const bodyBottom = bodyTop + bodyH;
+        const fontSize = marking.length > 4 ? 24 : 30;
+
+        const svg = `
+        <svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" style="max-width: 240px; width: 100%; height: auto;">
+            <line x1="${cx - 26}" y1="${bodyBottom - 6}" x2="${cx - 26}" y2="${h - 8}" stroke="#9a9a9a" stroke-width="4"/>
+            <line x1="${cx + 26}" y1="${bodyBottom - 6}" x2="${cx + 26}" y2="${h - 8}" stroke="#9a9a9a" stroke-width="4"/>
+            <rect x="${bodyX}" y="${bodyTop}" width="${bodyW}" height="${bodyH}" rx="${bodyH / 2}" ry="${bodyH / 2}"
+                  fill="#c9a227" stroke="#0005" stroke-width="1.5"/>
+            <text x="${cx}" y="${bodyTop + bodyH / 2}" text-anchor="middle" dominant-baseline="central"
+                  font-family="monospace" font-weight="bold" font-size="${fontSize}" fill="#1a1100">${marking}</text>
+        </svg>`;
+        target.innerHTML = svg;
     }
 
     /*

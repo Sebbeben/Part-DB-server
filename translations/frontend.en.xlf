@@ -181,11 +181,5 @@
         <target>Code</target>
       </segment>
     </unit>
-    <unit id="vcalc_c_small" name="tools.value_calc.capacitor.small_value">
-      <segment state="translated">
-        <source>tools.value_calc.capacitor.small_value</source>
-        <target>(usually printed directly, e.g. 4n7 / 4R7)</target>
-      </segment>
-    </unit>
   </file>
 </xliff>

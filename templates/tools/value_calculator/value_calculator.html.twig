@@ -39,7 +39,7 @@
                 <div class="row mb-3">
                     <label class="col-sm-3 col-form-label">{% trans %}tools.value_calc.resistor.bands{% endtrans %}</label>
                     <div class="col-sm-9">
-                        <div class="btn-group" role="group" {{ stimulus_target('pages/valueCalculator', 'bandCountGroup') }}>
+                        <div class="btn-group" role="group">
                             <input type="radio" class="btn-check" name="vc-band-count" id="vc-band-4" value="4"
                                    autocomplete="off" {{ stimulus_action('pages/valueCalculator', 'changeBandCount', 'change') }}>
                             <label class="btn btn-outline-primary" for="vc-band-4">{% trans %}tools.value_calc.resistor.bands_4{% endtrans %}</label>
@@ -83,6 +83,7 @@
 
             {# ---------------- Capacitor code ---------------- #}
             <div class="tab-pane fade" id="vc-capacitor" role="tabpanel">
+                <p class="text-muted">{% trans %}tools.value_calc.capacitor.intro{% endtrans %}</p>
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <h5>{% trans %}tools.value_calc.capacitor.decode_title{% endtrans %}</h5>
@@ -92,6 +93,7 @@
                                    {{ stimulus_target('pages/valueCalculator', 'capCodeInput') }}
                                    {{ stimulus_action('pages/valueCalculator', 'decodeCapacitor', 'input') }}>
                         </div>
+                        <div class="text-center mb-2" {{ stimulus_target('pages/valueCalculator', 'capDecodeSvg') }}></div>
                         <div class="alert alert-secondary" {{ stimulus_target('pages/valueCalculator', 'capDecodeResult') }}></div>
                     </div>
                     <div class="col-md-6 mb-3">
@@ -102,6 +104,7 @@
                                    {{ stimulus_target('pages/valueCalculator', 'capValueInput') }}
                                    {{ stimulus_action('pages/valueCalculator', 'encodeCapacitor', 'input') }}>
                         </div>
+                        <div class="text-center mb-2" {{ stimulus_target('pages/valueCalculator', 'capEncodeSvg') }}></div>
                         <div class="alert alert-secondary" {{ stimulus_target('pages/valueCalculator', 'capEncodeResult') }}></div>
                     </div>
                 </div>

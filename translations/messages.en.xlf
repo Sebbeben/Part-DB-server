@@ -12593,6 +12593,12 @@ Buerklin-API Authentication server:
         <target>Generate bands</target>
       </segment>
     </unit>
+    <unit id="vcalc_c_intro" name="tools.value_calc.capacitor.intro">
+      <segment state="translated">
+        <source>tools.value_calc.capacitor.intro</source>
+        <target>Works for the printed number codes on ceramic (MLCC), film and similar capacitors. Small caps below 100 pF are usually printed directly (e.g. 47 or 4R7), larger ones use the 3-digit code (e.g. 104 = 100 nF).</target>
+      </segment>
+    </unit>
     <unit id="vcalc_c_dectitle" name="tools.value_calc.capacitor.decode_title">
       <segment state="translated">
         <source>tools.value_calc.capacitor.decode_title</source>
