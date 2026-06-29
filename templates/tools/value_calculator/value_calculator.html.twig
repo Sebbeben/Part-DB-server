@@ -55,6 +55,26 @@
                     </div>
                 </div>
 
+                <div class="row mb-3">
+                    <label for="vc-resistor-body" class="col-sm-3 col-form-label">{% trans %}tools.value_calc.body_color{% endtrans %}</label>
+                    <div class="col-sm-9 d-flex align-items-center flex-wrap gap-2">
+                        <input type="color" class="form-control form-control-color" id="vc-resistor-body" value="#d8c7a0"
+                               title="{% trans %}tools.value_calc.body_color{% endtrans %}"
+                               {{ stimulus_target('pages/valueCalculator', 'resistorBodyColor') }}
+                               {{ stimulus_action('pages/valueCalculator', 'updateResistor', 'input') }}>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-secondary" data-color="#d8c7a0"
+                                    {{ stimulus_action('pages/valueCalculator', 'applyResistorBodyColor') }}>{% trans %}tools.value_calc.body.beige{% endtrans %}</button>
+                            <button type="button" class="btn btn-outline-secondary" data-color="#3f6fb0"
+                                    {{ stimulus_action('pages/valueCalculator', 'applyResistorBodyColor') }}>{% trans %}tools.value_calc.body.blue{% endtrans %}</button>
+                            <button type="button" class="btn btn-outline-secondary" data-color="#3f7d4f"
+                                    {{ stimulus_action('pages/valueCalculator', 'applyResistorBodyColor') }}>{% trans %}tools.value_calc.body.green{% endtrans %}</button>
+                            <button type="button" class="btn btn-outline-secondary" data-color="#9fc6e0"
+                                    {{ stimulus_action('pages/valueCalculator', 'applyResistorBodyColor') }}>{% trans %}tools.value_calc.body.lightblue{% endtrans %}</button>
+                        </div>
+                    </div>
+                </div>
+
                 {# Band color selects are rendered by the Stimulus controller #}
                 <div class="row mb-3" {{ stimulus_target('pages/valueCalculator', 'bandSelects') }}></div>
 
@@ -84,6 +104,25 @@
             {# ---------------- Capacitor code ---------------- #}
             <div class="tab-pane fade" id="vc-capacitor" role="tabpanel">
                 <p class="text-muted">{% trans %}tools.value_calc.capacitor.intro{% endtrans %}</p>
+                <div class="row mb-3">
+                    <label for="vc-cap-body" class="col-sm-3 col-form-label">{% trans %}tools.value_calc.body_color{% endtrans %}</label>
+                    <div class="col-sm-9 d-flex align-items-center flex-wrap gap-2">
+                        <input type="color" class="form-control form-control-color" id="vc-cap-body" value="#c9a227"
+                               title="{% trans %}tools.value_calc.body_color{% endtrans %}"
+                               {{ stimulus_target('pages/valueCalculator', 'capBodyColor') }}
+                               {{ stimulus_action('pages/valueCalculator', 'updateCapacitorColor', 'input') }}>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-secondary" data-color="#c9a227"
+                                    {{ stimulus_action('pages/valueCalculator', 'applyCapBodyColor') }}>{% trans %}tools.value_calc.body.tan{% endtrans %}</button>
+                            <button type="button" class="btn btn-outline-secondary" data-color="#2f6db0"
+                                    {{ stimulus_action('pages/valueCalculator', 'applyCapBodyColor') }}>{% trans %}tools.value_calc.body.blue{% endtrans %}</button>
+                            <button type="button" class="btn btn-outline-secondary" data-color="#b34a2f"
+                                    {{ stimulus_action('pages/valueCalculator', 'applyCapBodyColor') }}>{% trans %}tools.value_calc.body.red{% endtrans %}</button>
+                            <button type="button" class="btn btn-outline-secondary" data-color="#303030"
+                                    {{ stimulus_action('pages/valueCalculator', 'applyCapBodyColor') }}>{% trans %}tools.value_calc.body.black{% endtrans %}</button>
+                        </div>
+                    </div>
+                </div>
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <h5>{% trans %}tools.value_calc.capacitor.decode_title{% endtrans %}</h5>

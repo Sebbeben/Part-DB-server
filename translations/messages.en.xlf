@@ -12527,6 +12527,54 @@ Buerklin-API Authentication server:
         <target>Decode and visualize resistor color bands, capacitor codes and SMD resistor markings. Pick the band colors to read a resistor, or enter a value to generate the matching color code.</target>
       </segment>
     </unit>
+    <unit id="vcalc_bodycolor" name="tools.value_calc.body_color">
+      <segment state="translated">
+        <source>tools.value_calc.body_color</source>
+        <target>Body color</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_body_beige" name="tools.value_calc.body.beige">
+      <segment state="translated">
+        <source>tools.value_calc.body.beige</source>
+        <target>Beige</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_body_blue" name="tools.value_calc.body.blue">
+      <segment state="translated">
+        <source>tools.value_calc.body.blue</source>
+        <target>Blue</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_body_green" name="tools.value_calc.body.green">
+      <segment state="translated">
+        <source>tools.value_calc.body.green</source>
+        <target>Green</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_body_lightblue" name="tools.value_calc.body.lightblue">
+      <segment state="translated">
+        <source>tools.value_calc.body.lightblue</source>
+        <target>Light blue</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_body_tan" name="tools.value_calc.body.tan">
+      <segment state="translated">
+        <source>tools.value_calc.body.tan</source>
+        <target>Tan</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_body_red" name="tools.value_calc.body.red">
+      <segment state="translated">
+        <source>tools.value_calc.body.red</source>
+        <target>Red</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_body_black" name="tools.value_calc.body.black">
+      <segment state="translated">
+        <source>tools.value_calc.body.black</source>
+        <target>Black</target>
+      </segment>
+    </unit>
     <unit id="vcalc_r_title" name="tools.value_calc.resistor.title">
       <segment state="translated">
         <source>tools.value_calc.resistor.title</source>

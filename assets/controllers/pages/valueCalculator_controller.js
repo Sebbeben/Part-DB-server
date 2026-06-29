@@ -64,9 +64,9 @@ const EIA96_MULTIPLIERS = {
 
 export default class extends Controller {
     static targets = [
-        "resistorSvg", "bandSelects", "resistorResult", "resistorValueInput",
+        "resistorSvg", "bandSelects", "resistorResult", "resistorValueInput", "resistorBodyColor",
         "capCodeInput", "capDecodeResult", "capDecodeSvg",
-        "capValueInput", "capEncodeResult", "capEncodeSvg",
+        "capValueInput", "capEncodeResult", "capEncodeSvg", "capBodyColor",
         "smdCodeInput", "smdResult",
     ];
 
@@ -279,6 +279,13 @@ export default class extends Controller {
         this.updateResistor();
     }
 
+    applyResistorBodyColor(event) {
+        if (this.hasResistorBodyColorTarget) {
+            this.resistorBodyColorTarget.value = event.currentTarget.dataset.color;
+        }
+        this.updateResistor();
+    }
+
     /** Draws the resistor SVG with the given band colors. */
     drawResistor(colors) {
         const width = 360;
@@ -310,7 +317,7 @@ export default class extends Controller {
         const svg = `
         <svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" style="max-width: 420px; width: 100%; height: auto;">
             <line x1="0" y1="${bodyY + bodyH / 2}" x2="${width}" y2="${bodyY + bodyH / 2}" stroke="#9a9a9a" stroke-width="4"/>
-            <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="14" ry="14" fill="#d8c7a0" stroke="#0004" stroke-width="1.5"/>
+            <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="14" ry="14" fill="${this.bodyColor(this.hasResistorBodyColorTarget ? this.resistorBodyColorTarget : null, "#d8c7a0")}" stroke="#0004" stroke-width="1.5"/>
             ${bands}
         </svg>`;
         this.resistorSvgTarget.innerHTML = svg;
@@ -449,17 +456,50 @@ export default class extends Controller {
         const bodyX = cx - bodyW / 2;
         const bodyBottom = bodyTop + bodyH;
         const fontSize = marking.length > 4 ? 24 : 30;
+        const fill = this.bodyColor(this.hasCapBodyColorTarget ? this.capBodyColorTarget : null, "#c9a227");
+        const textColor = this.contrastColor(fill);
 
         const svg = `
         <svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" style="max-width: 240px; width: 100%; height: auto;">
             <line x1="${cx - 26}" y1="${bodyBottom - 6}" x2="${cx - 26}" y2="${h - 8}" stroke="#9a9a9a" stroke-width="4"/>
             <line x1="${cx + 26}" y1="${bodyBottom - 6}" x2="${cx + 26}" y2="${h - 8}" stroke="#9a9a9a" stroke-width="4"/>
             <rect x="${bodyX}" y="${bodyTop}" width="${bodyW}" height="${bodyH}" rx="${bodyH / 2}" ry="${bodyH / 2}"
-                  fill="#c9a227" stroke="#0005" stroke-width="1.5"/>
+                  fill="${fill}" stroke="#0005" stroke-width="1.5"/>
             <text x="${cx}" y="${bodyTop + bodyH / 2}" text-anchor="middle" dominant-baseline="central"
-                  font-family="monospace" font-weight="bold" font-size="${fontSize}" fill="#1a1100">${marking}</text>
+                  font-family="monospace" font-weight="bold" font-size="${fontSize}" fill="${textColor}">${marking}</text>
         </svg>`;
         target.innerHTML = svg;
+    }
+
+    /** Re-renders both capacitor pictures when the body color changes. */
+    updateCapacitorColor() {
+        this.decodeCapacitor();
+        this.encodeCapacitor();
+    }
+
+    applyCapBodyColor(event) {
+        if (this.hasCapBodyColorTarget) {
+            this.capBodyColorTarget.value = event.currentTarget.dataset.color;
+        }
+        this.updateCapacitorColor();
+    }
+
+    /** Returns the value of a color input, falling back to a default. */
+    bodyColor(target, fallback) {
+        return target && target.value ? target.value : fallback;
+    }
+
+    /** Picks black or white text for readable contrast on the given hex color. */
+    contrastColor(hex) {
+        const c = hex.replace("#", "");
+        if (c.length < 6) {
+            return "#1a1100";
+        }
+        const r = parseInt(c.substring(0, 2), 16);
+        const g = parseInt(c.substring(2, 4), 16);
+        const b = parseInt(c.substring(4, 6), 16);
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        return luminance > 0.6 ? "#1a1100" : "#f5f5f5";
     }
 
     /*
