@@ -323,15 +323,20 @@ export default class extends Controller {
             <defs>
                 ${this.leadGradient(uid)}
                 ${this.cylinderGradient(uid)}
+                ${this.endVignetteGradient(uid)}
+                ${this.blurFilter(uid)}
                 <clipPath id="${uid}clip"><rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="20" ry="20"/></clipPath>
                 ${this.shadowFilter(uid)}
             </defs>
+            <ellipse cx="${width / 2}" cy="${cy + bodyH / 2 + 16}" rx="${bodyW / 2 + 6}" ry="7" fill="#000000" opacity="0.16" filter="url(#${uid}blur)"/>
             <g filter="url(#${uid}shadow)">
                 <rect x="6" y="${cy - 5}" width="${width - 12}" height="10" rx="5" fill="url(#${uid}lead)"/>
                 <g clip-path="url(#${uid}clip)">
                     <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" fill="${body}"/>
                     ${bands}
                     <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" fill="url(#${uid}cyl)"/>
+                    <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" fill="url(#${uid}vig)"/>
+                    <ellipse cx="${width / 2}" cy="${bodyY + bodyH * 0.26}" rx="${bodyW * 0.44}" ry="4.5" fill="#ffffff" opacity="0.45" filter="url(#${uid}blur)"/>
                 </g>
                 <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="20" ry="20" fill="none" stroke="#00000055" stroke-width="1"/>
             </g>
@@ -479,22 +484,27 @@ export default class extends Controller {
         const textColor = this.contrastColor(fill);
         const shadow = textColor === "#f5f5f5" ? "#00000088" : "#ffffff66";
 
+        const leadLen = h - bodyBottom + 12;
         const svg = `
         <svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" style="max-width: 250px; width: 100%; height: auto;">
             <defs>
                 ${this.leadGradient(uid)}
                 ${this.glossGradient(uid)}
                 ${this.specularGradient(uid)}
+                ${this.blurFilter(uid)}
                 <clipPath id="${uid}clip"><rect x="${bodyX}" y="${bodyTop}" width="${bodyW}" height="${bodyH}" rx="${rx}" ry="${rx}"/></clipPath>
                 ${this.shadowFilter(uid)}
             </defs>
+            <ellipse cx="${cx}" cy="${h - 4}" rx="${bodyW * 0.4}" ry="6" fill="#000000" opacity="0.15" filter="url(#${uid}blur)"/>
             <g filter="url(#${uid}shadow)">
-                <rect x="${cx - 28}" y="${bodyBottom - 14}" width="8" height="${h - bodyBottom + 12}" rx="4" fill="url(#${uid}lead)"/>
-                <rect x="${cx + 20}" y="${bodyBottom - 14}" width="8" height="${h - bodyBottom + 12}" rx="4" fill="url(#${uid}lead)"/>
+                <rect x="${cx - 26}" y="${bodyBottom - 14}" width="8" height="${leadLen}" rx="4" fill="url(#${uid}lead)" transform="rotate(-7 ${cx - 22} ${bodyBottom - 10})"/>
+                <rect x="${cx + 18}" y="${bodyBottom - 14}" width="8" height="${leadLen}" rx="4" fill="url(#${uid}lead)" transform="rotate(7 ${cx + 22} ${bodyBottom - 10})"/>
                 <g clip-path="url(#${uid}clip)">
                     <rect x="${bodyX}" y="${bodyTop}" width="${bodyW}" height="${bodyH}" fill="${fill}"/>
                     <rect x="${bodyX}" y="${bodyTop}" width="${bodyW}" height="${bodyH}" fill="url(#${uid}gloss)"/>
-                    <ellipse cx="${cx - 12}" cy="${bodyTop + bodyH * 0.32}" rx="${bodyW * 0.42}" ry="${bodyH * 0.26}" fill="url(#${uid}spec)"/>
+                    <ellipse cx="${cx - 6}" cy="${bodyTop + bodyH * 0.3}" rx="${bodyW * 0.44}" ry="${bodyH * 0.28}" fill="url(#${uid}spec)"/>
+                    <ellipse cx="${cx - bodyW * 0.22}" cy="${bodyTop + bodyH * 0.22}" rx="14" ry="7" fill="#ffffff" opacity="0.5" filter="url(#${uid}blur)"/>
+                    <ellipse cx="${cx}" cy="${bodyBottom}" rx="${bodyW * 0.5}" ry="14" fill="#000000" opacity="0.14"/>
                 </g>
                 <rect x="${bodyX}" y="${bodyTop}" width="${bodyW}" height="${bodyH}" rx="${rx}" ry="${rx}" fill="none" stroke="#00000055" stroke-width="1"/>
                 <text x="${cx}" y="${cyBody}" text-anchor="middle" dominant-baseline="central"
@@ -567,15 +577,34 @@ export default class extends Controller {
     /** Radial highlight used as a specular reflection on the cap body. */
     specularGradient(uid) {
         return `<radialGradient id="${uid}spec" cx="0.5" cy="0.5" r="0.5">
-            <stop offset="0" stop-color="#ffffff" stop-opacity="0.5"/>
+            <stop offset="0" stop-color="#ffffff" stop-opacity="0.55"/>
             <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
         </radialGradient>`;
     }
 
-    /** Soft drop shadow filter. */
+    /** Horizontal vignette that darkens the rounded ends of a cylinder. */
+    endVignetteGradient(uid) {
+        return `<linearGradient id="${uid}vig" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#000000" stop-opacity="0.38"/>
+            <stop offset="0.1" stop-color="#000000" stop-opacity="0.06"/>
+            <stop offset="0.16" stop-color="#000000" stop-opacity="0"/>
+            <stop offset="0.84" stop-color="#000000" stop-opacity="0"/>
+            <stop offset="0.9" stop-color="#000000" stop-opacity="0.06"/>
+            <stop offset="1" stop-color="#000000" stop-opacity="0.38"/>
+        </linearGradient>`;
+    }
+
+    /** Soft gaussian blur, used for specular streaks and ground shadows. */
+    blurFilter(uid) {
+        return `<filter id="${uid}blur" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="3"/>
+        </filter>`;
+    }
+
+    /** Soft, slightly offset drop shadow filter. */
     shadowFilter(uid) {
-        return `<filter id="${uid}shadow" x="-10%" y="-15%" width="120%" height="145%">
-            <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000000" flood-opacity="0.3"/>
+        return `<filter id="${uid}shadow" x="-15%" y="-20%" width="130%" height="160%">
+            <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#000000" flood-opacity="0.28"/>
         </filter>`;
     }
 
@@ -668,19 +697,26 @@ export default class extends Controller {
         const fill = this.bodyColor(this.hasSmdBodyColorTarget ? this.smdBodyColorTarget : null, "#262626");
         const textColor = this.contrastColor(fill);
 
+        const innerX = bodyX + capW;
+        const innerW = bodyW - 2 * capW;
         const svg = `
         <svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" style="max-width: 290px; width: 100%; height: auto;">
             <defs>
                 ${this.metalGradient(uid)}
                 ${this.glossGradient(uid)}
+                ${this.blurFilter(uid)}
                 <clipPath id="${uid}clip"><rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="8" ry="8"/></clipPath>
                 ${this.shadowFilter(uid)}
             </defs>
+            <ellipse cx="${cx}" cy="${bodyY + bodyH + 14}" rx="${bodyW * 0.46}" ry="6" fill="#000000" opacity="0.16" filter="url(#${uid}blur)"/>
             <g filter="url(#${uid}shadow)">
                 <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="8" ry="8" fill="url(#${uid}metal)" stroke="#00000055" stroke-width="1"/>
                 <g clip-path="url(#${uid}clip)">
-                    <rect x="${bodyX + capW}" y="${bodyY}" width="${bodyW - 2 * capW}" height="${bodyH}" fill="${fill}"/>
-                    <rect x="${bodyX + capW}" y="${bodyY}" width="${bodyW - 2 * capW}" height="${bodyH}" fill="url(#${uid}gloss)"/>
+                    <rect x="${innerX}" y="${bodyY}" width="${innerW}" height="${bodyH}" fill="${fill}"/>
+                    <rect x="${innerX}" y="${bodyY}" width="${innerW}" height="${bodyH}" fill="url(#${uid}gloss)"/>
+                    <rect x="${innerX}" y="${bodyY + 2}" width="${innerW}" height="2.5" fill="#ffffff" opacity="0.22"/>
+                    <rect x="${innerX - 2}" y="${bodyY}" width="3" height="${bodyH}" fill="#000000" opacity="0.28"/>
+                    <rect x="${innerX + innerW - 1}" y="${bodyY}" width="3" height="${bodyH}" fill="#000000" opacity="0.28"/>
                 </g>
                 <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central"
                       font-family="monospace" font-weight="bold" font-size="${fontSize}" fill="${textColor}">${marking}</text>
