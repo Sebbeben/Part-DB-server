@@ -101,7 +101,10 @@ export default class extends Controller {
         "capCodeInput", "capDecodeResult", "capDecodeSvg",
         "capValueInput", "capEncodeResult", "capEncodeSvg", "capBodyColor",
         "capPitch", "capDiameter", "capVoltage", "capSpec",
+        "capDecodePanel", "capEncodePanel",
         "smdCodeInput", "smdResult", "smdSvg", "smdBodyColor", "smdPackage", "smdSpec",
+        "smdValueInput", "smdEncodeResult", "smdEncodeSvg",
+        "smdDecodePanel", "smdEncodePanel",
         "previewInput",
     ];
 
@@ -117,6 +120,30 @@ export default class extends Controller {
         this.setBandsFromValue(4700, 1);
         this.updateResistor();
         this.updateCapSpec();
+
+        // Preload every decoder/encoder with a live example so no tab starts empty.
+        this.capCodeInputTarget.value = "104";
+        this.decodeCapacitor();
+        this.capValueInputTarget.value = "100nF";
+        this.encodeCapacitor();
+        this.smdCodeInputTarget.value = "472";
+        this.decodeSmd();
+        this.smdValueInputTarget.value = "4k7";
+        this.encodeSmd();
+    }
+
+    /** Toggles the capacitor tab between the "code → value" and "value → code" panels. */
+    switchCapMode(event) {
+        const decode = event.currentTarget.dataset.mode === "decode";
+        this.capDecodePanelTarget.classList.toggle("d-none", !decode);
+        this.capEncodePanelTarget.classList.toggle("d-none", decode);
+    }
+
+    /** Toggles the SMD tab between the "code → value" and "value → code" panels. */
+    switchSmdMode(event) {
+        const decode = event.currentTarget.dataset.mode === "decode";
+        this.smdDecodePanelTarget.classList.toggle("d-none", !decode);
+        this.smdEncodePanelTarget.classList.toggle("d-none", decode);
     }
 
     /**
@@ -133,6 +160,7 @@ export default class extends Controller {
             capDecode: this.hasCapDecodeSvgTarget ? this.capDecodeSvgTarget : null,
             capEncode: this.hasCapEncodeSvgTarget ? this.capEncodeSvgTarget : null,
             smd: this.hasSmdSvgTarget ? this.smdSvgTarget : null,
+            smdEncode: this.hasSmdEncodeSvgTarget ? this.smdEncodeSvgTarget : null,
         };
         const container = containers[event.currentTarget.dataset.svg];
         const svg = container ? container.innerHTML.trim() : "";
@@ -860,23 +888,78 @@ export default class extends Controller {
             return;
         }
         this.smdResultTarget.textContent = this.formatOhms(ohms);
-        this.drawSmd(raw);
+        this.drawSmd(this.smdSvgTarget, raw);
     }
 
-    /** Re-renders the SMD chip picture when the body color changes. */
-    updateSmdColor() {
+    /** Re-decodes and re-encodes so both SMD chip pictures follow the package/color. */
+    updateSmd() {
         this.decodeSmd();
+        this.encodeSmd();
+    }
+
+    /** Re-renders the SMD chip pictures when the body color changes. */
+    updateSmdColor() {
+        this.updateSmd();
     }
 
     applySmdBodyColor(event) {
         if (this.hasSmdBodyColorTarget) {
             this.smdBodyColorTarget.value = event.currentTarget.dataset.color;
         }
-        this.decodeSmd();
+        this.updateSmd();
+    }
+
+    /**
+     * Converts a resistance in ohms into the printed SMD marking: R-notation below
+     * 10 Ω (4.7 -> 4R7, 0.47 -> R47) and the 3-digit EIA code from 10 Ω upwards.
+     * Returns null when the value is out of the representable range.
+     */
+    ohmsToSmdCode(ohms) {
+        if (!(ohms > 0)) {
+            return null;
+        }
+        if (ohms < 10) {
+            let s = parseFloat(ohms.toFixed(2)).toString();
+            if (!s.includes(".")) {
+                s += ".0";
+            }
+            return s.startsWith("0.") ? "R" + s.slice(2) : s.replace(".", "R");
+        }
+        // Two significant figures + power-of-ten multiplier digit
+        let exp = Math.floor(Math.log10(ohms)) - 1;
+        let significant = Math.round(ohms / Math.pow(10, exp));
+        if (significant >= 100) {
+            significant = Math.round(significant / 10);
+            exp += 1;
+        }
+        if (exp < 0 || exp > 7) {
+            return null;
+        }
+        return significant.toString().padStart(2, "0") + exp.toString();
+    }
+
+    encodeSmd() {
+        const raw = this.smdValueInputTarget.value;
+        const ohms = this.parseValue(raw, "R");
+        if (ohms === null || !(ohms > 0)) {
+            this.smdEncodeResultTarget.textContent = raw.trim() === ""
+                ? "" : trans("tools.value_calc.invalid_input");
+            this.smdEncodeSvgTarget.innerHTML = "";
+            return;
+        }
+        const code = this.ohmsToSmdCode(ohms);
+        if (code === null) {
+            this.smdEncodeResultTarget.textContent = trans("tools.value_calc.out_of_range");
+            this.smdEncodeSvgTarget.innerHTML = "";
+            return;
+        }
+        this.smdEncodeResultTarget.textContent =
+            `${trans("tools.value_calc.smd.code")}: ${code} (${this.formatOhms(ohms)})`;
+        this.drawSmd(this.smdEncodeSvgTarget, code);
     }
 
     /** Draws a 3D-shaded SMD chip resistor with marking and dimension callouts. */
-    drawSmd(marking) {
+    drawSmd(target, marking) {
         const uid = this.svgId();
         const w = 290;
         const h = 168;
@@ -923,7 +1006,7 @@ export default class extends Controller {
             </g>
             ${callouts}
         </svg>`;
-        this.smdSvgTarget.innerHTML = svg;
+        target.innerHTML = svg;
 
         if (this.hasSmdSpecTarget) {
             this.smdSpecTarget.textContent =
@@ -951,43 +1034,55 @@ export default class extends Controller {
         if (raw === null || raw === undefined) {
             return null;
         }
-        let s = raw.trim().toLowerCase();
+        // Keep the original case: the prefix "m" (milli) and "M" (mega) must stay distinct.
+        let s = raw.trim();
         if (s === "") {
             return null;
         }
-        // Strip a trailing unit symbol (ohm, ω, f)
+        // Strip a trailing unit symbol (ohm, ω, f) — matched case-insensitively.
         s = s.replace(/ohm[s]?$/i, "").replace(/Ω/gi, "").trim();
         if (baseUnit === "F") {
             s = s.replace(/farad[s]?$/i, "").replace(/f$/i, "").trim();
         }
 
-        const prefixes = {p: 1e-12, n: 1e-9, u: 1e-6, "µ": 1e-6, m: 1e-3, k: 1e3, meg: 1e6, M: 1e6, g: 1e9, G: 1e9};
-
         // RKM style: prefix used as decimal separator, e.g. 4k7, 1R5, 2u2, 4M7
         let m = s.match(/^(\d+)\s*(p|n|u|µ|m|k|meg|g|r)\s*(\d+)$/i);
         if (m) {
-            const prefix = m[2];
-            // Case sensitive lookup first so 4M7 = 4.7 mega (not milli), matching the plain-number branch below.
-            const factor = prefix.toLowerCase() === "r" ? 1 : (prefixes[prefix] ?? prefixes[prefix.toLowerCase()] ?? 1);
-            return parseFloat(`${m[1]}.${m[3]}`) * factor;
+            const factor = this.prefixFactor(m[2]);
+            return factor === null ? null : parseFloat(`${m[1]}.${m[3]}`) * factor;
         }
 
-        // Number followed by an optional prefix, e.g. 4.7k, 100n, 470
+        // Number followed by an optional prefix, e.g. 4.7k, 100n, 470, 10M
         m = s.match(/^([\d.]+)\s*(p|n|u|µ|m|k|meg|g|r)?$/i);
         if (m) {
             const num = parseFloat(m[1]);
             if (Number.isNaN(num)) {
                 return null;
             }
-            if (!m[2] || m[2].toLowerCase() === "r") {
-                return num;
-            }
-            // Case sensitive lookup first (M=mega), then lower case
-            const factor = prefixes[m[2]] ?? prefixes[m[2].toLowerCase()];
-            return factor ? num * factor : null;
+            const factor = this.prefixFactor(m[2]);
+            return factor === null ? null : num * factor;
         }
 
         return null;
+    }
+
+    /**
+     * Resolves an SI prefix (or the RKM "R" separator) to a multiplication factor.
+     * Case sensitive only for m (milli) vs M (mega); all other prefixes are
+     * case-insensitive. Returns 1 for "no prefix"/R, or null for an unknown prefix.
+     */
+    prefixFactor(prefix) {
+        if (prefix === undefined || prefix === "" || prefix.toLowerCase() === "r") {
+            return 1;
+        }
+        if (prefix === "m") {
+            return 1e-3;
+        }
+        if (prefix === "M") {
+            return 1e6;
+        }
+        const factors = {p: 1e-12, n: 1e-9, u: 1e-6, "µ": 1e-6, k: 1e3, meg: 1e6, g: 1e9};
+        return factors[prefix.toLowerCase()] ?? null;
     }
 
     formatOhms(ohms) {

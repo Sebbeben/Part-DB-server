@@ -13259,6 +13259,18 @@ Buerklin-API Authentication server:
         <target>Enter an SMD resistor marking. Supports 3-digit (472), 4-digit (4701), R-notation (4R7) and EIA-96 (01C) codes.</target>
       </segment>
     </unit>
+    <unit id="vcalc_s_enctitle" name="tools.value_calc.smd.encode_title">
+      <segment state="translated">
+        <source>tools.value_calc.smd.encode_title</source>
+        <target>Value → SMD code</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_s_enchelp" name="tools.value_calc.smd.encode_help">
+      <segment state="translated">
+        <source>tools.value_calc.smd.encode_help</source>
+        <target>Enter a resistance (e.g. 4k7) to get the 3-digit SMD marking.</target>
+      </segment>
+    </unit>
     <unit id="GNWhoTW" name="part.table.eda_reference">
       <segment state="translated">
         <source>part.table.eda_reference</source>

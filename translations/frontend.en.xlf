@@ -187,6 +187,12 @@
         <target>Code</target>
       </segment>
     </unit>
+    <unit id="vcalc_s_code" name="tools.value_calc.smd.code">
+      <segment state="translated">
+        <source>tools.value_calc.smd.code</source>
+        <target>SMD code</target>
+      </segment>
+    </unit>
     <unit id="8d38e7538" name="user.password_strength.crack_time">
       <segment state="translated">
         <source>user.password_strength.crack_time</source>
