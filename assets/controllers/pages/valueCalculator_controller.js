@@ -18,7 +18,7 @@
  */
 
 import {Controller} from "@hotwired/stimulus";
-import * as bootbox from "bootbox";
+import {AlertSwal} from "../../helpers/swal";
 import {trans} from "../../translator.js";
 
 /**
@@ -137,7 +137,7 @@ export default class extends Controller {
         const container = containers[event.currentTarget.dataset.svg];
         const svg = container ? container.innerHTML.trim() : "";
         if (!svg.includes("<svg")) {
-            bootbox.alert(trans("tools.value_calc.attach.nothing"));
+            AlertSwal.fire({title: trans("tools.value_calc.attach.nothing")});
             return;
         }
 
