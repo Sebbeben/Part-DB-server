@@ -23,16 +23,22 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Entity\UserSystem\User;
 use App\Services\System\BackupManager;
+use App\Services\System\InstallationTypeDetector;
 use App\Services\System\UpdateChecker;
 use App\Services\System\UpdateExecutor;
+use App\Services\System\WatchtowerClient;
 use Shivas\VersioningBundle\Service\VersionManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 
 /**
@@ -49,10 +55,15 @@ class UpdateManagerController extends AbstractController
         private readonly UpdateExecutor $updateExecutor,
         private readonly VersionManagerInterface $versionManager,
         private readonly BackupManager $backupManager,
+        private readonly InstallationTypeDetector $installationTypeDetector,
+        private readonly UserPasswordHasherInterface $passwordHasher,
+        private readonly WatchtowerClient $watchtowerClient,
         #[Autowire(env: 'bool:DISABLE_WEB_UPDATES')]
         private readonly bool $webUpdatesDisabled = false,
         #[Autowire(env: 'bool:DISABLE_BACKUP_RESTORE')]
         private readonly bool $backupRestoreDisabled = false,
+        #[Autowire(env: 'bool:DISABLE_BACKUP_DOWNLOAD')]
+        private readonly bool $backupDownloadDisabled = false,
     ) {
     }
 
@@ -73,6 +84,16 @@ class UpdateManagerController extends AbstractController
     {
         if ($this->backupRestoreDisabled) {
             throw new AccessDeniedHttpException('Backup restore is disabled by server configuration.');
+        }
+    }
+
+    /**
+     * Check if backup download is disabled and throw exception if so.
+     */
+    private function denyIfBackupDownloadDisabled(): void
+    {
+        if ($this->backupDownloadDisabled) {
+            throw new AccessDeniedHttpException('Backup download is disabled by server configuration.');
         }
     }
 
@@ -101,6 +122,8 @@ class UpdateManagerController extends AbstractController
             'backups' => $this->backupManager->getBackups(),
             'web_updates_disabled' => $this->webUpdatesDisabled,
             'backup_restore_disabled' => $this->backupRestoreDisabled,
+            'backup_download_disabled' => $this->backupDownloadDisabled,
+            'is_docker' => $this->installationTypeDetector->isDocker(),
         ]);
     }
 
@@ -206,6 +229,7 @@ class UpdateManagerController extends AbstractController
     #[Route('/start', name: 'admin_update_manager_start', methods: ['POST'])]
     public function startUpdate(Request $request): Response
     {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
         $this->denyAccessUnlessGranted('@system.manage_updates');
         $this->denyIfWebUpdatesDisabled();
 
@@ -315,11 +339,125 @@ class UpdateManagerController extends AbstractController
     }
 
     /**
+     * Create a manual backup.
+     */
+    #[Route('/backup', name: 'admin_update_manager_backup', methods: ['POST'])]
+    public function createBackup(Request $request): Response
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyAccessUnlessGranted('@system.manage_updates');
+
+        if (!$this->isCsrfTokenValid('update_manager_backup', $request->request->get('_token'))) {
+            $this->addFlash('error', 'Invalid CSRF token.');
+            return $this->redirectToRoute('admin_update_manager');
+        }
+
+        if ($this->updateExecutor->isLocked()) {
+            $this->addFlash('error', 'Cannot create backup while an update is in progress.');
+            return $this->redirectToRoute('admin_update_manager');
+        }
+
+        try {
+            $this->backupManager->createBackup(null, 'manual');
+            $this->addFlash('success', 'update_manager.backup.created');
+        } catch (\Exception $e) {
+            $this->addFlash('error', 'Backup failed: ' . $e->getMessage());
+        }
+
+        return $this->redirectToRoute('admin_update_manager');
+    }
+
+    /**
+     * Delete a backup file.
+     */
+    #[Route('/backup/delete', name: 'admin_update_manager_backup_delete', methods: ['POST'])]
+    public function deleteBackup(Request $request): Response
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyAccessUnlessGranted('@system.manage_updates');
+
+        if (!$this->isCsrfTokenValid('update_manager_delete', $request->request->get('_token'))) {
+            $this->addFlash('error', 'Invalid CSRF token.');
+            return $this->redirectToRoute('admin_update_manager');
+        }
+
+        $filename = $request->request->get('filename');
+        if ($filename && $this->backupManager->deleteBackup($filename)) {
+            $this->addFlash('success', 'update_manager.backup.deleted');
+        } else {
+            $this->addFlash('error', 'update_manager.backup.delete_error');
+        }
+
+        return $this->redirectToRoute('admin_update_manager');
+    }
+
+    /**
+     * Delete an update log file.
+     */
+    #[Route('/log/delete', name: 'admin_update_manager_log_delete', methods: ['POST'])]
+    public function deleteLog(Request $request): Response
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyAccessUnlessGranted('@system.manage_updates');
+
+        if (!$this->isCsrfTokenValid('update_manager_delete', $request->request->get('_token'))) {
+            $this->addFlash('error', 'Invalid CSRF token.');
+            return $this->redirectToRoute('admin_update_manager');
+        }
+
+        $filename = $request->request->get('filename');
+        if ($filename && $this->updateExecutor->deleteLog($filename)) {
+            $this->addFlash('success', 'update_manager.log.deleted');
+        } else {
+            $this->addFlash('error', 'update_manager.log.delete_error');
+        }
+
+        return $this->redirectToRoute('admin_update_manager');
+    }
+
+    /**
+     * Download a backup file.
+     * Requires password confirmation as backups contain sensitive data (password hashes, secrets, etc.).
+     */
+    #[Route('/backup/download', name: 'admin_update_manager_backup_download', methods: ['POST'])]
+    public function downloadBackup(Request $request): Response
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyAccessUnlessGranted('@system.manage_updates');
+        $this->denyIfBackupDownloadDisabled();
+
+        if (!$this->isCsrfTokenValid('update_manager_download', $request->request->get('_token'))) {
+            $this->addFlash('error', 'Invalid CSRF token.');
+            return $this->redirectToRoute('admin_update_manager');
+        }
+
+        // Verify password
+        $password = $request->request->get('password', '');
+        $user = $this->getUser();
+        if (!$user instanceof User || !$this->passwordHasher->isPasswordValid($user, $password)) {
+            $this->addFlash('error', 'update_manager.backup.download.invalid_password');
+            return $this->redirectToRoute('admin_update_manager');
+        }
+
+        $filename = $request->request->get('filename', '');
+        $details = $this->backupManager->getBackupDetails($filename);
+        if (!$details) {
+            throw $this->createNotFoundException('Backup not found');
+        }
+
+        $response = new BinaryFileResponse($details['path']);
+        $response->setContentDisposition(ResponseHeaderBag::DISPOSITION_ATTACHMENT, $details['file']);
+
+        return $response;
+    }
+
+    /**
      * Restore from a backup.
      */
     #[Route('/restore', name: 'admin_update_manager_restore', methods: ['POST'])]
     public function restore(Request $request): Response
     {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
         $this->denyAccessUnlessGranted('@system.manage_updates');
         $this->denyIfBackupRestoreDisabled();
 
@@ -367,5 +505,101 @@ class UpdateManagerController extends AbstractController
         }
 
         return $this->redirectToRoute('admin_update_manager');
+    }
+
+    /**
+     * Start a Docker update via Watchtower.
+     */
+    #[Route('/start-docker', name: 'admin_update_manager_start_docker', methods: ['POST'])]
+    public function startDockerUpdate(Request $request): Response
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyAccessUnlessGranted('@system.manage_updates');
+        $this->denyIfWebUpdatesDisabled();
+
+        // Validate CSRF token
+        if (!$this->isCsrfTokenValid('update_manager_start_docker', $request->request->get('_token'))) {
+            $this->addFlash('error', 'Invalid CSRF token');
+            return $this->redirectToRoute('admin_update_manager');
+        }
+
+        // Check if Watchtower is configured and available
+        if (!$this->watchtowerClient->isConfigured()) {
+            $this->addFlash('error', 'Watchtower is not configured. Please set WATCHTOWER_API_URL and WATCHTOWER_API_TOKEN.');
+            return $this->redirectToRoute('admin_update_manager');
+        }
+
+        if (!$this->watchtowerClient->isAvailable()) {
+            $this->addFlash('error', 'Watchtower is not reachable. Please check that the Watchtower container is running and accessible.');
+            return $this->redirectToRoute('admin_update_manager');
+        }
+
+        // Create backup if requested
+        $createBackup = $request->request->getBoolean('backup', true);
+        if ($createBackup) {
+            try {
+                $this->backupManager->createBackup();
+            } catch (\Throwable $e) {
+                $this->addFlash('error', 'Failed to create backup before update: ' . $e->getMessage());
+                return $this->redirectToRoute('admin_update_manager');
+            }
+        }
+
+        // Trigger Watchtower update
+        $success = $this->watchtowerClient->triggerUpdate();
+
+        if (!$success) {
+            $this->addFlash('error', 'Failed to trigger Watchtower update. Check the logs for details.');
+            return $this->redirectToRoute('admin_update_manager');
+        }
+
+        $currentVersion = $this->versionManager->getVersion()->toString();
+
+        // Redirect to Docker progress page
+        return $this->redirectToRoute('admin_update_manager_docker_progress', [
+            'previous_version' => $currentVersion,
+        ]);
+    }
+
+    /**
+     * Docker update progress page.
+     * This page contains client-side JavaScript that polls until the container restarts.
+     */
+    #[Route('/progress/docker', name: 'admin_update_manager_docker_progress', methods: ['GET'])]
+    public function dockerProgress(Request $request): Response
+    {
+        $this->denyAccessUnlessGranted('@system.manage_updates');
+
+        $previousVersion = $request->query->get('previous_version', 'unknown');
+
+        return $this->render('admin/update_manager/docker_progress.html.twig', [
+            'previous_version' => $previousVersion,
+        ]);
+    }
+
+    /**
+     * Lightweight health check endpoint used by Docker update progress page.
+     * Returns current version so the client-side JS can detect when the container restarts with a new version.
+     *
+     * Intentionally unauthenticated: after a Docker container restart, the user's session may not survive
+     * (depends on session storage backend). The version string is non-sensitive public information.
+     * This endpoint is also whitelisted in MaintenanceModeSubscriber.
+     */
+    #[Route('/health', name: 'admin_update_manager_health', methods: ['GET'])]
+    public function healthCheck(): JsonResponse
+    {
+        //Only show version if user is logged in and has permission
+
+        $response = [
+            'status' => 'ok',
+        ];
+
+        if ($this->isGranted('@system.show_updates')) {
+            $response['version'] = $this->versionManager->getVersion()->toString();
+        } else {
+            $response['version'] = "not authorized";
+        }
+
+        return $this->json($response);
     }
 }

@@ -71,22 +71,16 @@ use Symfony\Component\Validator\Constraints\Length;
         new Post(securityPostDenormalize: 'is_granted("create", object)'),
         new Patch(security: 'is_granted("edit", object)'),
         new Delete(security: 'is_granted("delete", object)'),
+        new GetCollection(
+            uriTemplate: '/parts/{id}/orderdetails.{_format}',
+            uriVariables: ['id' => new Link(toProperty: 'part', fromClass: Part::class)],
+            normalizationContext: ['groups' => ['orderdetail:read', 'pricedetail:read', 'api:basic:read'], 'openapi_definition_name' => 'Read'],
+            openapi: new Operation(summary: 'Retrieves the orderdetails of a part.'),
+            security: 'is_granted("@parts.read")'
+        ),
     ],
     normalizationContext: ['groups' => ['orderdetail:read', 'orderdetail:read:standalone',  'api:basic:read', 'pricedetail:read'], 'openapi_definition_name' => 'Read'],
     denormalizationContext: ['groups' => ['orderdetail:write', 'api:basic:write'], 'openapi_definition_name' => 'Write'],
-)]
-#[ApiResource(
-    uriTemplate: '/parts/{id}/orderdetails.{_format}',
-    operations: [
-        new GetCollection(
-            openapi: new Operation(summary: 'Retrieves the orderdetails of a part.'),
-            security: 'is_granted("@parts.read")'
-        )
-    ],
-    uriVariables: [
-        'id' => new Link(toProperty: 'part', fromClass: Part::class)
-    ],
-    normalizationContext: ['groups' => ['orderdetail:read', 'pricedetail:read', 'api:basic:read'], 'openapi_definition_name' => 'Read']
 )]
 #[ApiFilter(PropertyFilter::class)]
 #[ApiFilter(PropertyFilter::class)]
@@ -121,6 +115,13 @@ class Orderdetail extends AbstractDBElement implements TimeStampableInterface, N
     #[Groups(['extended', 'full', 'import', 'orderdetail:read', 'orderdetail:write'])]
     #[ORM\Column(type: Types::BOOLEAN)]
     protected bool $obsolete = false;
+
+    /**
+     * @var bool|null Whether this orderdetail's supplier part number should be exported as an EDA field. Null means use system default.
+     */
+    #[Groups(['full', 'import', 'orderdetail:read', 'orderdetail:write'])]
+    #[ORM\Column(type: Types::BOOLEAN, nullable: true, options: ['default' => null])]
+    protected ?bool $eda_visibility = null;
 
     /**
      * @var string The URL to the product on the supplier's website
@@ -414,6 +415,21 @@ class Orderdetail extends AbstractDBElement implements TimeStampableInterface, N
     public function setPricesIncludesVAT(?bool $includesVat): self
     {
         $this->prices_includes_vat = $includesVat;
+
+        return $this;
+    }
+
+    public function isEdaVisibility(): ?bool
+    {
+        return $this->eda_visibility;
+    }
+
+    /**
+     * @return $this
+     */
+    public function setEdaVisibility(?bool $eda_visibility): self
+    {
+        $this->eda_visibility = $eda_visibility;
 
         return $this;
     }

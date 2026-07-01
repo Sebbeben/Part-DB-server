@@ -86,6 +86,10 @@ bundled with Part-DB. Set `DATABASE_MYSQL_SSL_VERIFY_CERT` if you want to accept
 * `ATTACHMENT_DOWNLOAD_BY_DEFAULT`: When this is set to 1, the "download external file" checkbox is checked by default
   when adding a new attachment. Otherwise, it is unchecked by default. Use this if you wanna download all attachments
   locally by default. Attachment download is only possible, when `ALLOW_ATTACHMENT_DOWNLOADS` is set to 1.
+* `ALLOW_ATTACHMENT_DOWNLOADS_FROM_LOCALNETWORK` (default `0`): When this is set to 1, users can make Part-DB directly download a file specified as a URL from the local network and create it as a local file. This allows users access to all resources available in the local network, which could be a security risk, so use this only if you trust your users and have a secure local network.
+* `ATTACHMENT_SHOW_HTML_FILES`: When enabled, user uploaded HTML attachments can be viewed directly in the browser. 
+  Many potential malicious functions are restricted, still this is a potential security risk and should only be enabled,
+  if you trust the users who can upload files. When set to 0, HTML files are rendered as plain text.
 * `USE_GRAVATAR`: Set to `1` to use [gravatar.com](https://gravatar.com/) images for user avatars (as long as they have
   not set their own picture). The users browsers have to download the pictures from a third-party (gravatar) server, so
   this might be a privacy risk.
@@ -110,10 +114,21 @@ bundled with Part-DB. Set `DATABASE_MYSQL_SSL_VERIFY_CERT` if you want to accept
     * `datastructure_create`: Creation of a new data structure (e.g. category, manufacturer, ...)
 * `CHECK_FOR_UPDATES` (default `1`): Set this to 0 if you do not want Part-DB to connect to GitHub to check for new
   versions, or if your server cannot connect to the internet.
-* `APP_SECRET` (env only): This variable is a configuration parameter used for various security-related purposes,
-  particularly for securing and protecting various aspects of your application. It's a secret key that is used for
-  cryptographic operations and security measures (session management, CSRF protection, etc..). Therefore this
-  value should be handled as confidential data and not shared publicly.
+* `APP_SECRET` (env only): A secret key used by Symfony for cryptographic operations — signing cookies, generating
+  CSRF tokens, and other security-sensitive tasks. **You must change this from the default value before exposing
+  Part-DB to any network.** The default value shipped with Part-DB is publicly known; leaving it in place would allow
+  an attacker to forge signed cookies and bypass CSRF protection.
+
+  Generate a secure value and add it to `.env.local`:
+  ```bash
+  echo "APP_SECRET=$(openssl rand -hex 32)" >> .env.local
+  ```
+  For Docker, pass it in the `environment` section of your `docker-compose.yaml`:
+  ```yaml
+  environment:
+    - APP_SECRET=<output of: openssl rand -hex 32>
+  ```
+  Part-DB displays a warning on the homepage (visible to administrators only) as long as the default value is in use.
 * `SHOW_PART_IMAGE_OVERLAY`: Set to 0 to disable the part image overlay, which appears if you hover over an image in the
   part image gallery
 * `IPN_SUGGEST_REGEX`: A global regular expression, that part IPNs have to fulfill. Enforce your own format for your users.
@@ -126,6 +141,8 @@ bundled with Part-DB. Set `DATABASE_MYSQL_SSL_VERIFY_CERT` if you want to accept
   unique increments for parts within a category hierarchy, ensuring consistency and uniqueness in IPN generation.
 * `IPN_USE_DUPLICATE_DESCRIPTION`: When enabled, the part’s description is used to find existing parts with the same 
   description and to determine the next available IPN by incrementing their numeric suffix for the suggestion list.
+* `KEYBINDINGS_SPECIAL_CHARS_ENABLED`: Set this to 0 to disable the special character keybindings (Alt + key) for inserting special characters. This can be useful if
+  they conflict with your keyboard layout or system shortcuts.
 
 ### E-Mail settings (all env only)
 
@@ -138,6 +155,18 @@ bundled with Part-DB. Set `DATABASE_MYSQL_SSL_VERIFY_CERT` if you want to accept
   sent from.
 * `ALLOW_EMAIL_PW_RESET`: Set this value to true, if you want to allow users to reset their password via an email
   notification. You have to configure the mail provider first before via the MAILER_DSN setting.
+
+### Update manager settings
+* `DISABLE_WEB_UPDATES` (default `1`): Set this to 0 to enable web-based updates. When enabled, you can perform updates
+  via the web interface in the update manager. This is disabled by default for security reasons, as it can be a risk if
+  not used carefully. You can still use the CLI commands to perform updates, even when web updates are disabled.
+* `DISABLE_BACKUP_RESTORE` (default `1`): Set this to 0 to enable backup restore via the web interface. When enabled, you can
+  restore backups via the web interface in the update manager. This is disabled by default for security reasons, as it can
+  be a risk if not used carefully. You can still use the CLI commands to perform backup restores, even when web-based
+  backup restore is disabled.
+* `DISABLE_BACKUP_DOWNLOAD` (default `1`): Set this to 0 to enable backup download via the web interface. When enabled, you can download backups via the web interface
+  in the update manager. This is disabled by default for security reasons, as it can be a risk if not used carefully, as
+  the downloads contain sensitive data like password hashes or secrets.
 
 ### Table related settings
 
@@ -250,9 +279,13 @@ See the [information providers]({% link usage/information_provider_system.md %})
 * `BANNER`: You can configure the text that should be shown as the banner on the homepage. Useful especially for docker
   containers. In all other applications you can just change the `config/banner.md` file.
 * `DISABLE_YEAR2038_BUG_CHECK` (env only): If set to `1`, the year 2038 bug check is disabled on 32-bit systems, and dates after
-2038 are no longer forbidden. However this will lead to 500 error messages when rendering dates after 2038 as all current
+2038 are no longer forbidden. However, this will lead to 500 error messages when rendering dates after 2038 as all current
 32-bit PHP versions can not format these dates correctly. This setting is for the case that future PHP versions will
 handle this correctly on 32-bit systems. 64-bit systems are not affected by this bug, and the check is always disabled.
+* `DEPRECATION_LOG_LEVEL` (default `emergency`) (env only): In the `prod` and `docker` environments, PHP/Symfony
+  deprecation notices are written to their own `var/log/<env>_deprecations.log` file. This option sets the minimum log 
+  level a deprecation notice must have to be written there. Since deprecation notices are logged with level `info`, 
+  the default value of `emergency` effectively disables this dedicated deprecation log. Set it to `debug` to enable it.
 
 ## Banner
 

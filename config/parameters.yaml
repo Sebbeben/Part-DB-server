@@ -53,6 +53,7 @@ parameters:
   # Themes commented here by default, are not really usable, because of display problems. Enable them at your own risk!
   partdb.available_themes:
     - bootstrap
+    - brite
     - cerulean
     - cosmo
     - cyborg
@@ -104,6 +105,8 @@ parameters:
   env(SAML_ROLE_MAPPING): '{}'
 
   env(DATABASE_EMULATE_NATURAL_SORT): 0
+
+  env(ALLOW_ATTACHMENT_DOWNLOADS_FROM_LOCALNETWORK): 0
 
   ######################################################################################################################
   # Bulk Info Provider Import Configuration

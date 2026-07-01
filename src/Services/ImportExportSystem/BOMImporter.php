@@ -396,10 +396,14 @@ class BOMImporter
                 }
             }
 
-            // Create unique key for this entry (name + part ID)
-            $entry_key = $name . '|' . ($part ? $part->getID() : 'null');
+            // Create unique key for this entry.
+            // When linked to a Part-DB part, use the part ID as key (merges footprint variants).
+            // Otherwise, use name (which includes package) to avoid merging unrelated components.
+            $entry_key = $part !== null
+                ? 'part:' . $part->getID()
+                : 'name:' . $name;
 
-            // Check if we already have an entry with the same name and part
+            // Check if we already have an entry with the same key
             if (isset($entries_by_key[$entry_key])) {
                 // Merge with existing entry
                 $existing_entry = $entries_by_key[$entry_key];
@@ -413,14 +417,22 @@ class BOMImporter
                 $existing_quantity = $existing_entry->getQuantity();
                 $existing_entry->setQuantity($existing_quantity + $quantity);
 
+                // Track footprint variants in comment when merging entries with different packages
+                $currentPackage = trim($mapped_entry['Package'] ?? '');
+                if ($currentPackage !== '' && !str_contains($existing_entry->getComment(), $currentPackage)) {
+                    $comment = $existing_entry->getComment();
+                    $existing_entry->setComment($comment . ', Footprint variant: ' . $currentPackage);
+                }
+
                 $this->logger->info('Merged duplicate BOM entry', [
                     'name' => $name,
-                    'part_id' => $part ? $part->getID() : null,
+                    'part_id' => $part?->getID(),
                     'original_quantity' => $existing_quantity,
                     'added_quantity' => $quantity,
                     'new_quantity' => $existing_quantity + $quantity,
                     'original_mountnames' => $existing_mountnames,
                     'added_mountnames' => $designator,
+                    'package' => $currentPackage,
                 ]);
 
                 continue; // Skip creating new entry
@@ -710,25 +722,35 @@ class BOMImporter
     }
 
     /**
+     * Try to detect the separator used in the CSV data by analyzing the first line and counting occurrences of common delimiters.
+     * @param  string  $data
+     * @return string
+     */
+    public function detectDelimiter(string $data): string
+    {
+        $delimiters = [',', ';', "\t"];
+        $lines = explode("\n", $data, 2);
+        $header_line = $lines[0] ?? '';
+        $delimiter_counts = [];
+        foreach ($delimiters as $delim) {
+            $delimiter_counts[$delim] = substr_count($header_line, $delim);
+        }
+        // Choose the delimiter with the highest count, default to comma if all are zero
+        $max_count = max($delimiter_counts);
+        $delimiter = array_search($max_count, $delimiter_counts, true);
+        if ($max_count === 0 || $delimiter === false) {
+            $delimiter = ',';
+        }
+        return $delimiter;
+    }
+
+    /**
      * Detect available fields in CSV data for field mapping UI
      */
     public function detectFields(string $data, ?string $delimiter = null): array
     {
         if ($delimiter === null) {
-            // Detect delimiter by counting occurrences in the first row (header)
-            $delimiters = [',', ';', "\t"];
-            $lines = explode("\n", $data, 2);
-            $header_line = $lines[0] ?? '';
-            $delimiter_counts = [];
-            foreach ($delimiters as $delim) {
-                $delimiter_counts[$delim] = substr_count($header_line, $delim);
-            }
-            // Choose the delimiter with the highest count, default to comma if all are zero
-            $max_count = max($delimiter_counts);
-            $delimiter = array_search($max_count, $delimiter_counts, true);
-            if ($max_count === 0 || $delimiter === false) {
-                $delimiter = ',';
-            }
+            $delimiter = $this->detectDelimiter($data);
         }
         // Handle potential BOM (Byte Order Mark) at the beginning
         $data = preg_replace('/^\xEF\xBB\xBF/', '', $data);
