@@ -548,7 +548,8 @@ export default class extends Controller {
             }
             return s.startsWith("0.") ? "R" + s.slice(2) : s.replace(".", "R");
         }
-        if (pf < 100) {
+        // Plain value only fits 10-99 pF; values that round up to 100 must use the EIA code below (100 pF -> "101").
+        if (Math.round(pf) < 100) {
             return Math.round(pf).toString();
         }
         // Two significant figures + power-of-ten multiplier digit
@@ -962,11 +963,12 @@ export default class extends Controller {
 
         const prefixes = {p: 1e-12, n: 1e-9, u: 1e-6, "µ": 1e-6, m: 1e-3, k: 1e3, meg: 1e6, M: 1e6, g: 1e9, G: 1e9};
 
-        // RKM style: prefix used as decimal separator, e.g. 4k7, 1R5, 2u2
+        // RKM style: prefix used as decimal separator, e.g. 4k7, 1R5, 2u2, 4M7
         let m = s.match(/^(\d+)\s*(p|n|u|µ|m|k|meg|g|r)\s*(\d+)$/i);
         if (m) {
-            const prefix = m[2].toLowerCase();
-            const factor = prefix === "r" ? 1 : (prefixes[prefix] ?? prefixes[m[2]] ?? 1);
+            const prefix = m[2];
+            // Case sensitive lookup first so 4M7 = 4.7 mega (not milli), matching the plain-number branch below.
+            const factor = prefix.toLowerCase() === "r" ? 1 : (prefixes[prefix] ?? prefixes[prefix.toLowerCase()] ?? 1);
             return parseFloat(`${m[1]}.${m[3]}`) * factor;
         }
 
