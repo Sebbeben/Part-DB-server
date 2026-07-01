@@ -195,52 +195,31 @@
                     </div>
                 </div>
                 <div class="text-muted small mb-3" {{ stimulus_target('pages/valueCalculator', 'capSpec') }}></div>
-                <div class="btn-group btn-group-sm mb-3" role="group">
-                    <input type="radio" class="btn-check" name="vc-cap-mode" id="vc-cap-mode-decode" autocomplete="off" checked
-                           data-mode="decode" {{ stimulus_action('pages/valueCalculator', 'switchCapMode', 'change') }}>
-                    <label class="btn btn-outline-primary" for="vc-cap-mode-decode">{% trans %}tools.value_calc.capacitor.decode_title{% endtrans %}</label>
-                    <input type="radio" class="btn-check" name="vc-cap-mode" id="vc-cap-mode-encode" autocomplete="off"
-                           data-mode="encode" {{ stimulus_action('pages/valueCalculator', 'switchCapMode', 'change') }}>
-                    <label class="btn btn-outline-primary" for="vc-cap-mode-encode">{% trans %}tools.value_calc.capacitor.encode_title{% endtrans %}</label>
-                </div>
-                <div {{ stimulus_target('pages/valueCalculator', 'capDecodePanel') }}>
-                    <p class="text-muted">{% trans %}tools.value_calc.capacitor.decode_help{% endtrans %}</p>
-                    <div class="input-group mb-2" style="max-width: 24rem;">
-                        <input type="text" class="form-control" placeholder="104K"
-                               {{ stimulus_target('pages/valueCalculator', 'capCodeInput') }}
-                               {{ stimulus_action('pages/valueCalculator', 'decodeCapacitor', 'input') }}>
-                    </div>
-                    <div class="text-center mb-2" {{ stimulus_target('pages/valueCalculator', 'capDecodeSvg') }}></div>
-                    {% if part is not null %}
-                        <div class="text-center mb-2">
-                            <button type="button" class="btn btn-sm btn-success" data-svg="capDecode"
-                                    data-name="{% trans %}tools.value_calc.capacitor.title{% endtrans %}"
-                                    {{ stimulus_action('pages/valueCalculator', 'attachToPart') }}>
-                                <i class="fas fa-paperclip"></i> {% trans %}tools.value_calc.attach.button{% endtrans %}
-                            </button>
-                        </div>
-                    {% endif %}
-                    <div class="alert alert-secondary" {{ stimulus_target('pages/valueCalculator', 'capDecodeResult') }}></div>
-                </div>
-                <div class="d-none" {{ stimulus_target('pages/valueCalculator', 'capEncodePanel') }}>
-                    <p class="text-muted">{% trans %}tools.value_calc.capacitor.encode_help{% endtrans %}</p>
-                    <div class="input-group mb-2" style="max-width: 24rem;">
-                        <input type="text" class="form-control" placeholder="100nF"
+                <div class="row g-3 mb-3" style="max-width: 34rem;">
+                    <div class="col-sm-6">
+                        <label class="form-label small mb-1" for="vc-cap-value">{% trans %}tools.value_calc.field.value{% endtrans %}</label>
+                        <input type="text" class="form-control" id="vc-cap-value" placeholder="100nF" data-field="value"
                                {{ stimulus_target('pages/valueCalculator', 'capValueInput') }}
-                               {{ stimulus_action('pages/valueCalculator', 'encodeCapacitor', 'input') }}>
+                               {{ stimulus_action('pages/valueCalculator', 'syncCap', 'input') }}>
                     </div>
-                    <div class="text-center mb-2" {{ stimulus_target('pages/valueCalculator', 'capEncodeSvg') }}></div>
-                    {% if part is not null %}
-                        <div class="text-center mb-2">
-                            <button type="button" class="btn btn-sm btn-success" data-svg="capEncode"
-                                    data-name="{% trans %}tools.value_calc.capacitor.title{% endtrans %}"
-                                    {{ stimulus_action('pages/valueCalculator', 'attachToPart') }}>
-                                <i class="fas fa-paperclip"></i> {% trans %}tools.value_calc.attach.button{% endtrans %}
-                            </button>
-                        </div>
-                    {% endif %}
-                    <div class="alert alert-secondary" {{ stimulus_target('pages/valueCalculator', 'capEncodeResult') }}></div>
+                    <div class="col-sm-6">
+                        <label class="form-label small mb-1" for="vc-cap-code">{% trans %}tools.value_calc.field.code{% endtrans %}</label>
+                        <input type="text" class="form-control border-primary border-2" id="vc-cap-code" placeholder="104" data-field="code"
+                               {{ stimulus_target('pages/valueCalculator', 'capCodeInput') }}
+                               {{ stimulus_action('pages/valueCalculator', 'syncCap', 'input') }}>
+                    </div>
                 </div>
+                <div class="text-center mb-2" {{ stimulus_target('pages/valueCalculator', 'capSvg') }}></div>
+                {% if part is not null %}
+                    <div class="text-center mb-2">
+                        <button type="button" class="btn btn-sm btn-success" data-svg="cap"
+                                data-name="{% trans %}tools.value_calc.capacitor.title{% endtrans %}"
+                                {{ stimulus_action('pages/valueCalculator', 'attachToPart') }}>
+                            <i class="fas fa-paperclip"></i> {% trans %}tools.value_calc.attach.button{% endtrans %}
+                        </button>
+                    </div>
+                {% endif %}
+                <div class="alert alert-secondary" {{ stimulus_target('pages/valueCalculator', 'capResult') }}></div>
             </div>
 
             {# ---------------- SMD resistor code ---------------- #}
@@ -279,53 +258,60 @@
                         </div>
                     </div>
                 </div>
-                <div class="btn-group btn-group-sm mb-3" role="group">
-                    <input type="radio" class="btn-check" name="vc-smd-mode" id="vc-smd-mode-decode" autocomplete="off" checked
-                           data-mode="decode" {{ stimulus_action('pages/valueCalculator', 'switchSmdMode', 'change') }}>
-                    <label class="btn btn-outline-primary" for="vc-smd-mode-decode">{% trans %}tools.value_calc.smd.decode_title{% endtrans %}</label>
-                    <input type="radio" class="btn-check" name="vc-smd-mode" id="vc-smd-mode-encode" autocomplete="off"
-                           data-mode="encode" {{ stimulus_action('pages/valueCalculator', 'switchSmdMode', 'change') }}>
-                    <label class="btn btn-outline-primary" for="vc-smd-mode-encode">{% trans %}tools.value_calc.smd.encode_title{% endtrans %}</label>
-                </div>
-                <div {{ stimulus_target('pages/valueCalculator', 'smdDecodePanel') }}>
-                    <p class="text-muted">{% trans %}tools.value_calc.smd.decode_help{% endtrans %}</p>
-                    <div class="input-group mb-2" style="max-width: 24rem;">
-                        <input type="text" class="form-control" placeholder="4R7"
-                               {{ stimulus_target('pages/valueCalculator', 'smdCodeInput') }}
-                               {{ stimulus_action('pages/valueCalculator', 'decodeSmd', 'input') }}>
-                    </div>
-                    <div class="text-center mb-2" {{ stimulus_target('pages/valueCalculator', 'smdSvg') }}></div>
-                    {% if part is not null %}
-                        <div class="text-center mb-2">
-                            <button type="button" class="btn btn-sm btn-success" data-svg="smd"
-                                    data-name="{% trans %}tools.value_calc.smd.title{% endtrans %}"
-                                    {{ stimulus_action('pages/valueCalculator', 'attachToPart') }}>
-                                <i class="fas fa-paperclip"></i> {% trans %}tools.value_calc.attach.button{% endtrans %}
-                            </button>
-                        </div>
-                    {% endif %}
-                    <div class="alert alert-secondary" {{ stimulus_target('pages/valueCalculator', 'smdResult') }}></div>
-                </div>
-                <div class="d-none" {{ stimulus_target('pages/valueCalculator', 'smdEncodePanel') }}>
-                    <p class="text-muted">{% trans %}tools.value_calc.smd.encode_help{% endtrans %}</p>
-                    <div class="input-group mb-2" style="max-width: 24rem;">
-                        <input type="text" class="form-control" placeholder="4k7"
+                <div class="form-text mb-1">{% trans %}tools.value_calc.smd.on_chip_help{% endtrans %}</div>
+                <div class="row g-3 mb-3">
+                    <div class="col-6 col-lg-3">
+                        <label class="form-label small mb-1" for="vc-smd-value">{% trans %}tools.value_calc.field.value{% endtrans %}</label>
+                        <input type="text" class="form-control" id="vc-smd-value" placeholder="4k7" data-field="value"
                                {{ stimulus_target('pages/valueCalculator', 'smdValueInput') }}
-                               {{ stimulus_action('pages/valueCalculator', 'encodeSmd', 'input') }}>
+                               {{ stimulus_action('pages/valueCalculator', 'syncSmd', 'input') }}>
                     </div>
-                    <div class="text-center mb-2" {{ stimulus_target('pages/valueCalculator', 'smdEncodeSvg') }}></div>
-                    {% if part is not null %}
-                        <div class="text-center mb-2">
-                            <button type="button" class="btn btn-sm btn-success" data-svg="smdEncode"
-                                    data-name="{% trans %}tools.value_calc.smd.title{% endtrans %}"
-                                    {{ stimulus_action('pages/valueCalculator', 'attachToPart') }}>
-                                <i class="fas fa-paperclip"></i> {% trans %}tools.value_calc.attach.button{% endtrans %}
-                            </button>
-                        </div>
-                    {% endif %}
-                    <div class="alert alert-secondary" {{ stimulus_target('pages/valueCalculator', 'smdEncodeResult') }}></div>
+                    <div class="col-6 col-lg-3">
+                        <label class="form-label small mb-1 d-flex align-items-center gap-2" for="vc-smd-code3">
+                            <input class="form-check-input mt-0" type="radio" name="vc-smd-mark" data-mark="code3" checked
+                                   title="{% trans %}tools.value_calc.field.on_chip{% endtrans %}"
+                                   {{ stimulus_action('pages/valueCalculator', 'pickSmdMarking', 'change') }}>
+                            {% trans %}tools.value_calc.field.code3{% endtrans %}
+                        </label>
+                        <input type="text" class="form-control" id="vc-smd-code3" placeholder="472" data-field="code3"
+                               {{ stimulus_target('pages/valueCalculator', 'smdCode3') }}
+                               {{ stimulus_action('pages/valueCalculator', 'syncSmd', 'input') }}>
+                    </div>
+                    <div class="col-6 col-lg-3">
+                        <label class="form-label small mb-1 d-flex align-items-center gap-2" for="vc-smd-code4">
+                            <input class="form-check-input mt-0" type="radio" name="vc-smd-mark" data-mark="code4"
+                                   title="{% trans %}tools.value_calc.field.on_chip{% endtrans %}"
+                                   {{ stimulus_action('pages/valueCalculator', 'pickSmdMarking', 'change') }}>
+                            {% trans %}tools.value_calc.field.code4{% endtrans %}
+                        </label>
+                        <input type="text" class="form-control" id="vc-smd-code4" placeholder="4701" data-field="code4"
+                               {{ stimulus_target('pages/valueCalculator', 'smdCode4') }}
+                               {{ stimulus_action('pages/valueCalculator', 'syncSmd', 'input') }}>
+                    </div>
+                    <div class="col-6 col-lg-3">
+                        <label class="form-label small mb-1 d-flex align-items-center gap-2" for="vc-smd-eia96">
+                            <input class="form-check-input mt-0" type="radio" name="vc-smd-mark" data-mark="eia96"
+                                   title="{% trans %}tools.value_calc.field.on_chip{% endtrans %}"
+                                   {{ stimulus_action('pages/valueCalculator', 'pickSmdMarking', 'change') }}>
+                            {% trans %}tools.value_calc.field.eia96{% endtrans %}
+                        </label>
+                        <input type="text" class="form-control" id="vc-smd-eia96" placeholder="—" data-field="eia96"
+                               {{ stimulus_target('pages/valueCalculator', 'smdEia96') }}
+                               {{ stimulus_action('pages/valueCalculator', 'syncSmd', 'input') }}>
+                    </div>
                 </div>
+                <div class="text-center mb-1" {{ stimulus_target('pages/valueCalculator', 'smdSvg') }}></div>
                 <div class="text-center text-muted small mb-2" {{ stimulus_target('pages/valueCalculator', 'smdSpec') }}></div>
+                {% if part is not null %}
+                    <div class="text-center mb-2">
+                        <button type="button" class="btn btn-sm btn-success" data-svg="smd"
+                                data-name="{% trans %}tools.value_calc.smd.title{% endtrans %}"
+                                {{ stimulus_action('pages/valueCalculator', 'attachToPart') }}>
+                            <i class="fas fa-paperclip"></i> {% trans %}tools.value_calc.attach.button{% endtrans %}
+                        </button>
+                    </div>
+                {% endif %}
+                <div class="alert alert-secondary" {{ stimulus_target('pages/valueCalculator', 'smdResult') }}></div>
             </div>
         </div>
     </div>

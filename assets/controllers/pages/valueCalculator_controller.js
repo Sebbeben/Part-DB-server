@@ -98,13 +98,10 @@ export default class extends Controller {
     static targets = [
         "resistorSvg", "bandSelects", "resistorResult", "resistorValueInput", "resistorBodyColor",
         "resistorPower", "resistorSpec",
-        "capCodeInput", "capDecodeResult", "capDecodeSvg",
-        "capValueInput", "capEncodeResult", "capEncodeSvg", "capBodyColor",
+        "capValueInput", "capCodeInput", "capSvg", "capResult", "capBodyColor",
         "capPitch", "capDiameter", "capVoltage", "capSpec",
-        "capDecodePanel", "capEncodePanel",
-        "smdCodeInput", "smdResult", "smdSvg", "smdBodyColor", "smdPackage", "smdSpec",
-        "smdValueInput", "smdEncodeResult", "smdEncodeSvg",
-        "smdDecodePanel", "smdEncodePanel",
+        "smdValueInput", "smdCode3", "smdCode4", "smdEia96",
+        "smdSvg", "smdResult", "smdBodyColor", "smdPackage", "smdSpec",
         "previewInput",
     ];
 
@@ -121,29 +118,25 @@ export default class extends Controller {
         this.updateResistor();
         this.updateCapSpec();
 
-        // Preload every decoder/encoder with a live example so no tab starts empty.
-        this.capCodeInputTarget.value = "104";
-        this.decodeCapacitor();
-        this.capValueInputTarget.value = "100nF";
-        this.encodeCapacitor();
-        this.smdCodeInputTarget.value = "472";
-        this.decodeSmd();
-        this.smdValueInputTarget.value = "4k7";
-        this.encodeSmd();
-    }
-
-    /** Toggles the capacitor tab between the "code → value" and "value → code" panels. */
-    switchCapMode(event) {
-        const decode = event.currentTarget.dataset.mode === "decode";
-        this.capDecodePanelTarget.classList.toggle("d-none", !decode);
-        this.capEncodePanelTarget.classList.toggle("d-none", decode);
-    }
-
-    /** Toggles the SMD tab between the "code → value" and "value → code" panels. */
-    switchSmdMode(event) {
-        const decode = event.currentTarget.dataset.mode === "decode";
-        this.smdDecodePanelTarget.classList.toggle("d-none", !decode);
-        this.smdEncodePanelTarget.classList.toggle("d-none", decode);
+        // Preload each tab with a live example so nothing starts empty. Each section is
+        // isolated so a failure in one can't block the others (and surfaces on screen).
+        try {
+            this.capPf = 100000; // 100 nF
+            this.setCapFields(this.capPf, null);
+            this.redrawCap();
+        } catch (e) {
+            console.error("value_calc: capacitor demo failed", e);
+            if (this.hasCapResultTarget) this.capResultTarget.textContent = "demo error: " + e.message;
+        }
+        try {
+            this.smdMarking = "code3";
+            this.smdOhms = 4700; // 4.7 kΩ
+            this.setSmdFields(this.smdOhms, null);
+            this.redrawSmd();
+        } catch (e) {
+            console.error("value_calc: SMD demo failed", e);
+            if (this.hasSmdResultTarget) this.smdResultTarget.textContent = "demo error: " + e.message;
+        }
     }
 
     /**
@@ -157,10 +150,8 @@ export default class extends Controller {
         }
         const containers = {
             resistor: this.hasResistorSvgTarget ? this.resistorSvgTarget : null,
-            capDecode: this.hasCapDecodeSvgTarget ? this.capDecodeSvgTarget : null,
-            capEncode: this.hasCapEncodeSvgTarget ? this.capEncodeSvgTarget : null,
+            cap: this.hasCapSvgTarget ? this.capSvgTarget : null,
             smd: this.hasSmdSvgTarget ? this.smdSvgTarget : null,
-            smdEncode: this.hasSmdEncodeSvgTarget ? this.smdEncodeSvgTarget : null,
         };
         const container = containers[event.currentTarget.dataset.svg];
         const svg = container ? container.innerHTML.trim() : "";
@@ -476,38 +467,54 @@ export default class extends Controller {
      * ---------------------------------------------------------------
      */
 
-    decodeCapacitor() {
-        const raw = (this.capCodeInputTarget.value || "").trim().toUpperCase();
-        if (raw === "") {
-            this.capDecodeResultTarget.textContent = "";
-            this.capDecodeSvgTarget.innerHTML = "";
+    /** Recomputes the linked value/code fields (and the picture) from whichever was edited. */
+    syncCap(event) {
+        const field = event.currentTarget.dataset.field;
+        const raw = event.currentTarget.value;
+        let pf = null;
+        if (field === "value") {
+            const farads = this.parseValue(raw, "F");
+            pf = farads === null ? null : farads * 1e12;
+        } else {
+            // Strip an optional trailing tolerance letter (e.g. the K in 104K).
+            const body = raw.trim().toUpperCase().replace(/^([0-9R]+)[A-Z]$/, "$1");
+            pf = this.capCodeToPf(body);
+        }
+        if (pf === null || !(pf > 0)) {
+            event.currentTarget.classList.add("is-invalid");
+            this.capPf = null;
+            this.capResultTarget.textContent = raw.trim() === "" ? "" : trans("tools.value_calc.invalid_input");
+            this.capSvgTarget.innerHTML = "";
             return;
         }
+        event.currentTarget.classList.remove("is-invalid");
+        this.capPf = pf;
+        this.setCapFields(pf, field);
+        this.redrawCap();
+    }
 
-        // Split off an optional trailing tolerance letter (e.g. the K in 104K)
-        let body = raw;
-        let tolLetter = null;
-        const letterMatch = raw.match(/^([0-9R]+)([A-Z])$/);
-        if (letterMatch) {
-            body = letterMatch[1];
-            tolLetter = letterMatch[2];
+    /** Writes the value/code fields from a capacitance in pF (skips the field being edited). */
+    setCapFields(pf, except) {
+        if (except !== "value" && this.hasCapValueInputTarget) {
+            this.capValueInputTarget.value = this.formatFarads(pf);
+            this.capValueInputTarget.classList.remove("is-invalid");
         }
+        if (except !== "code" && this.hasCapCodeInputTarget) {
+            const code = this.pfToCapCode(pf);
+            this.capCodeInputTarget.value = code ?? "";
+            this.capCodeInputTarget.classList.remove("is-invalid");
+        }
+    }
 
-        const pf = this.capCodeToPf(body);
-        if (pf === null) {
-            this.capDecodeResultTarget.textContent = trans("tools.value_calc.invalid_input");
-            this.capDecodeSvgTarget.innerHTML = "";
+    /** Draws the capacitor picture (the printed code) plus the value/spec text. */
+    redrawCap() {
+        if (this.capPf === null || this.capPf === undefined || !(this.capPf > 0)) {
             return;
         }
-
-        let text = `${this.formatFarads(pf)} (${this.formatFarads(pf, true)})`;
-        if (tolLetter && CAP_TOLERANCE[tolLetter]) {
-            text += ` · ${trans("tools.value_calc.tolerance")}: ${CAP_TOLERANCE[tolLetter]}`;
-        } else if (tolLetter) {
-            text += ` · ${trans("tools.value_calc.unknown_tolerance")} "${tolLetter}"`;
-        }
-        this.capDecodeResultTarget.textContent = text;
-        this.drawCapacitor(this.capDecodeSvgTarget, body + (tolLetter ?? ""));
+        const code = this.pfToCapCode(this.capPf);
+        this.capResultTarget.textContent =
+            `${this.formatFarads(this.capPf)} (${this.formatFarads(this.capPf, true)})`;
+        this.drawCapacitor(this.capSvgTarget, code ?? this.formatFarads(this.capPf));
     }
 
     /**
@@ -540,27 +547,6 @@ export default class extends Controller {
         return null;
     }
 
-    encodeCapacitor() {
-        const raw = this.capValueInputTarget.value;
-        const farads = this.parseValue(raw, "F");
-        if (farads === null || !(farads > 0)) {
-            this.capEncodeResultTarget.textContent = raw.trim() === ""
-                ? "" : trans("tools.value_calc.invalid_input");
-            this.capEncodeSvgTarget.innerHTML = "";
-            return;
-        }
-        const pf = farads * 1e12;
-        const code = this.pfToCapCode(pf);
-
-        if (code === null) {
-            this.capEncodeResultTarget.textContent = trans("tools.value_calc.out_of_range");
-            this.capEncodeSvgTarget.innerHTML = "";
-            return;
-        }
-        this.capEncodeResultTarget.textContent =
-            `${trans("tools.value_calc.capacitor.code")}: ${code} (${this.formatFarads(pf)})`;
-        this.drawCapacitor(this.capEncodeSvgTarget, code);
-    }
 
     /**
      * Returns the marking that is typically printed on a ceramic capacitor for
@@ -689,24 +675,22 @@ export default class extends Controller {
         this.capSpecTarget.textContent = spec;
     }
 
-    /** Re-renders both capacitor pictures when the body color changes. */
+    /** Re-renders the capacitor picture when the body color changes. */
     updateCapacitorColor() {
-        this.decodeCapacitor();
-        this.encodeCapacitor();
+        this.redrawCap();
     }
 
-    /** Updates the spec line and re-renders both capacitor pictures. */
+    /** Updates the spec line and re-renders the capacitor picture. */
     updateCapDimensions() {
         this.updateCapSpec();
-        this.decodeCapacitor();
-        this.encodeCapacitor();
+        this.redrawCap();
     }
 
     applyCapBodyColor(event) {
         if (this.hasCapBodyColorTarget) {
             this.capBodyColorTarget.value = event.currentTarget.dataset.color;
         }
-        this.updateCapacitorColor();
+        this.redrawCap();
     }
 
     /** Unique id prefix per drawn SVG, so gradient/filter ids never collide. */
@@ -854,59 +838,171 @@ export default class extends Controller {
      * ---------------------------------------------------------------
      */
 
-    decodeSmd() {
-        const raw = (this.smdCodeInputTarget.value || "").trim().toUpperCase();
-        if (raw === "") {
-            this.smdResultTarget.textContent = "";
+    /** Recomputes all linked SMD fields (and the picture) from whichever was edited. */
+    syncSmd(event) {
+        const field = event.currentTarget.dataset.field;
+        const raw = event.currentTarget.value;
+        const ohms = field === "value" ? this.parseValue(raw, "R") : this.smdCodeToOhms(raw);
+        if (ohms === null || !(ohms > 0)) {
+            event.currentTarget.classList.add("is-invalid");
+            this.smdOhms = null;
+            this.smdResultTarget.textContent = raw.trim() === "" ? "" : trans("tools.value_calc.invalid_input");
             this.smdSvgTarget.innerHTML = "";
             return;
         }
+        event.currentTarget.classList.remove("is-invalid");
+        this.smdOhms = ohms;
+        this.setSmdFields(ohms, field);
+        this.redrawSmd();
+    }
 
-        let ohms = null;
-
-        if (raw.includes("R") && /^\d*R\d*$/.test(raw)) {
-            // R notation, e.g. 4R7 = 4.7, R47 = 0.47
-            ohms = parseFloat(raw.replace("R", "."));
-        } else if (/^\d{2}[A-Z]$/.test(raw)) {
-            // EIA-96: two digits (value code) + multiplier letter
-            const codeNum = parseInt(raw.substring(0, 2), 10);
-            const letter = raw.charAt(2);
-            if (codeNum >= 1 && codeNum <= 96 && EIA96_MULTIPLIERS[letter] !== undefined) {
-                ohms = EIA96_VALUES[codeNum - 1] * EIA96_MULTIPLIERS[letter];
+    /** Fills the value / 3-digit / 4-digit / EIA-96 fields (skips the field being edited). */
+    setSmdFields(ohms, except) {
+        const fields = {
+            value: () => this.formatOhms(ohms),
+            code3: () => this.ohmsToSmdCode(ohms) ?? "",
+            code4: () => this.ohmsTo4Digit(ohms) ?? "",
+            eia96: () => this.ohmsToEia96(ohms) ?? "—",
+        };
+        const targets = {
+            value: this.hasSmdValueInputTarget ? this.smdValueInputTarget : null,
+            code3: this.hasSmdCode3Target ? this.smdCode3Target : null,
+            code4: this.hasSmdCode4Target ? this.smdCode4Target : null,
+            eia96: this.hasSmdEia96Target ? this.smdEia96Target : null,
+        };
+        for (const key of Object.keys(fields)) {
+            const t = targets[key];
+            if (!t) {
+                continue;
             }
-        } else if (/^\d{3}$/.test(raw)) {
-            // 3-digit: two significant + multiplier
-            ohms = parseInt(raw.substring(0, 2), 10) * Math.pow(10, parseInt(raw.charAt(2), 10));
-        } else if (/^\d{4}$/.test(raw)) {
-            // 4-digit (E96 precision): three significant + multiplier
-            ohms = parseInt(raw.substring(0, 3), 10) * Math.pow(10, parseInt(raw.charAt(3), 10));
+            if (key !== except) {
+                t.value = fields[key]();
+            }
+            t.classList.remove("is-invalid");
         }
+    }
 
-        if (ohms === null || Number.isNaN(ohms)) {
-            this.smdResultTarget.textContent = trans("tools.value_calc.invalid_input");
-            this.smdSvgTarget.innerHTML = "";
+    /** Draws the SMD chip using the marking currently selected as "printed on the part". */
+    redrawSmd() {
+        if (this.smdOhms === null || this.smdOhms === undefined || !(this.smdOhms > 0)) {
             return;
         }
-        this.smdResultTarget.textContent = this.formatOhms(ohms);
-        this.drawSmd(this.smdSvgTarget, raw);
+        const codes = {
+            code3: this.ohmsToSmdCode(this.smdOhms),
+            code4: this.ohmsTo4Digit(this.smdOhms),
+            eia96: this.ohmsToEia96(this.smdOhms),
+        };
+        const mark = this.smdMarking || "code3";
+        const marking = codes[mark] || codes.code3 || this.formatOhms(this.smdOhms);
+        this.smdResultTarget.textContent = this.formatOhms(this.smdOhms);
+        this.drawSmd(this.smdSvgTarget, marking);
+        this.highlightSmdMarking();
     }
 
-    /** Re-decodes and re-encodes so both SMD chip pictures follow the package/color. */
+    /** Chooses which code is printed on the drawn chip. */
+    pickSmdMarking(event) {
+        this.smdMarking = event.currentTarget.dataset.mark;
+        this.redrawSmd();
+    }
+
+    /** Outlines the field whose code is currently drawn on the chip. */
+    highlightSmdMarking() {
+        const map = {
+            code3: this.hasSmdCode3Target ? this.smdCode3Target : null,
+            code4: this.hasSmdCode4Target ? this.smdCode4Target : null,
+            eia96: this.hasSmdEia96Target ? this.smdEia96Target : null,
+        };
+        const active = this.smdMarking || "code3";
+        for (const [key, t] of Object.entries(map)) {
+            if (t) {
+                t.classList.toggle("border-primary", key === active);
+                t.classList.toggle("border-2", key === active);
+            }
+        }
+    }
+
+    /** Parses any SMD marking (R-notation, EIA-96, 3-digit, 4-digit) to ohms, or null. */
+    smdCodeToOhms(raw) {
+        const code = (raw || "").trim().toUpperCase();
+        if (code === "") {
+            return null;
+        }
+        if (code.includes("R") && /^\d*R\d*$/.test(code)) {
+            const v = parseFloat(code.replace("R", "."));
+            return Number.isNaN(v) ? null : v;
+        }
+        if (/^\d{2}[A-Z]$/.test(code)) {
+            const n = parseInt(code.substring(0, 2), 10);
+            const letter = code.charAt(2);
+            if (n >= 1 && n <= 96 && EIA96_MULTIPLIERS[letter] !== undefined) {
+                return EIA96_VALUES[n - 1] * EIA96_MULTIPLIERS[letter];
+            }
+            return null;
+        }
+        if (/^\d{3}$/.test(code)) {
+            return parseInt(code.substring(0, 2), 10) * Math.pow(10, parseInt(code.charAt(2), 10));
+        }
+        if (/^\d{4}$/.test(code)) {
+            return parseInt(code.substring(0, 3), 10) * Math.pow(10, parseInt(code.charAt(3), 10));
+        }
+        return null;
+    }
+
+    /** ohms -> 4-digit precision code (3 significant figures), R-notation below 100 Ω. */
+    ohmsTo4Digit(ohms) {
+        if (!(ohms > 0)) {
+            return null;
+        }
+        if (ohms < 100) {
+            let s = parseFloat(ohms.toPrecision(3)).toString();
+            if (!s.includes(".")) {
+                s += ".0";
+            }
+            return s.startsWith("0.") ? "R" + s.slice(2) : s.replace(".", "R");
+        }
+        let exp = Math.floor(Math.log10(ohms)) - 2;
+        let significant = Math.round(ohms / Math.pow(10, exp));
+        if (significant >= 1000) {
+            significant = Math.round(significant / 10);
+            exp += 1;
+        }
+        if (exp < 0 || exp > 9) {
+            return null;
+        }
+        return significant.toString().padStart(3, "0") + exp.toString();
+    }
+
+    /** ohms -> EIA-96 code (value code + multiplier letter) for E96 values, else null. */
+    ohmsToEia96(ohms) {
+        if (!(ohms > 0)) {
+            return null;
+        }
+        const order = ["A", "B", "C", "D", "E", "F", "X", "S", "Y", "R", "Z"];
+        for (const letter of order) {
+            const base = ohms / EIA96_MULTIPLIERS[letter];
+            const idx = EIA96_VALUES.findIndex((v) => Math.abs(v - base) < 0.5);
+            if (idx >= 0) {
+                return String(idx + 1).padStart(2, "0") + letter;
+            }
+        }
+        return null;
+    }
+
+    /** Re-renders the SMD chip when the package changes. */
     updateSmd() {
-        this.decodeSmd();
-        this.encodeSmd();
+        this.redrawSmd();
     }
 
-    /** Re-renders the SMD chip pictures when the body color changes. */
+    /** Re-renders the SMD chip when the body color changes. */
     updateSmdColor() {
-        this.updateSmd();
+        this.redrawSmd();
     }
 
     applySmdBodyColor(event) {
         if (this.hasSmdBodyColorTarget) {
             this.smdBodyColorTarget.value = event.currentTarget.dataset.color;
         }
-        this.updateSmd();
+        this.redrawSmd();
     }
 
     /**
@@ -936,26 +1032,6 @@ export default class extends Controller {
             return null;
         }
         return significant.toString().padStart(2, "0") + exp.toString();
-    }
-
-    encodeSmd() {
-        const raw = this.smdValueInputTarget.value;
-        const ohms = this.parseValue(raw, "R");
-        if (ohms === null || !(ohms > 0)) {
-            this.smdEncodeResultTarget.textContent = raw.trim() === ""
-                ? "" : trans("tools.value_calc.invalid_input");
-            this.smdEncodeSvgTarget.innerHTML = "";
-            return;
-        }
-        const code = this.ohmsToSmdCode(ohms);
-        if (code === null) {
-            this.smdEncodeResultTarget.textContent = trans("tools.value_calc.out_of_range");
-            this.smdEncodeSvgTarget.innerHTML = "";
-            return;
-        }
-        this.smdEncodeResultTarget.textContent =
-            `${trans("tools.value_calc.smd.code")}: ${code} (${this.formatOhms(ohms)})`;
-        this.drawSmd(this.smdEncodeSvgTarget, code);
     }
 
     /** Draws a 3D-shaded SMD chip resistor with marking and dimension callouts. */

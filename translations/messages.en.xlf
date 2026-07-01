@@ -13271,6 +13271,48 @@ Buerklin-API Authentication server:
         <target>Enter a resistance (e.g. 4k7) to get the 3-digit SMD marking.</target>
       </segment>
     </unit>
+    <unit id="vcalc_s_onchiphelp" name="tools.value_calc.smd.on_chip_help">
+      <segment state="translated">
+        <source>tools.value_calc.smd.on_chip_help</source>
+        <target>Edit any field to update the others. Use the radio to pick which code is printed on the chip.</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_f_value" name="tools.value_calc.field.value">
+      <segment state="translated">
+        <source>tools.value_calc.field.value</source>
+        <target>Value</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_f_code" name="tools.value_calc.field.code">
+      <segment state="translated">
+        <source>tools.value_calc.field.code</source>
+        <target>Code</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_f_code3" name="tools.value_calc.field.code3">
+      <segment state="translated">
+        <source>tools.value_calc.field.code3</source>
+        <target>3-digit</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_f_code4" name="tools.value_calc.field.code4">
+      <segment state="translated">
+        <source>tools.value_calc.field.code4</source>
+        <target>4-digit</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_f_eia96" name="tools.value_calc.field.eia96">
+      <segment state="translated">
+        <source>tools.value_calc.field.eia96</source>
+        <target>EIA-96</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_f_onchip" name="tools.value_calc.field.on_chip">
+      <segment state="translated">
+        <source>tools.value_calc.field.on_chip</source>
+        <target>Printed on the chip</target>
+      </segment>
+    </unit>
     <unit id="GNWhoTW" name="part.table.eda_reference">
       <segment state="translated">
         <source>part.table.eda_reference</source>
