@@ -68,7 +68,7 @@
                 <div class="row mb-3">
                     <label for="vc-resistor-power" class="col-sm-3 col-form-label">{% trans %}tools.value_calc.resistor.power{% endtrans %}</label>
                     <div class="col-sm-9">
-                        <select class="form-select" id="vc-resistor-power"
+                        <select class="form-select" id="vc-resistor-power" style="max-width: 12rem;"
                                 {{ stimulus_target('pages/valueCalculator', 'resistorPower') }}
                                 {{ stimulus_action('pages/valueCalculator', 'updateResistor', 'change') }}>
                             <option value="0.125">1/8 W</option>
@@ -197,18 +197,34 @@
                     </div>
                 </div>
                 <div class="text-muted small mb-3" {{ stimulus_target('pages/valueCalculator', 'capSpec') }}></div>
-                <div class="row g-3 mb-3" style="max-width: 34rem;">
-                    <div class="col-sm-6">
+                <div class="row g-3 mb-3" style="max-width: 42rem;">
+                    <div class="col-sm-4">
                         <label class="form-label small mb-1" for="vc-cap-value">{% trans %}tools.value_calc.field.value{% endtrans %}</label>
                         <input type="text" class="form-control" id="vc-cap-value" placeholder="100nF" data-field="value"
                                {{ stimulus_target('pages/valueCalculator', 'capValueInput') }}
                                {{ stimulus_action('pages/valueCalculator', 'syncCap', 'input') }}>
                     </div>
-                    <div class="col-sm-6">
+                    <div class="col-sm-4">
                         <label class="form-label small mb-1" for="vc-cap-code">{% trans %}tools.value_calc.field.code{% endtrans %}</label>
                         <input type="text" class="form-control border-primary border-2" id="vc-cap-code" placeholder="104" data-field="code"
                                {{ stimulus_target('pages/valueCalculator', 'capCodeInput') }}
                                {{ stimulus_action('pages/valueCalculator', 'syncCap', 'input') }}>
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label small mb-1" for="vc-cap-tol">{% trans %}tools.value_calc.field.tolerance{% endtrans %}</label>
+                        <select class="form-select" id="vc-cap-tol"
+                                {{ stimulus_target('pages/valueCalculator', 'capTolerance') }}
+                                {{ stimulus_action('pages/valueCalculator', 'redrawCap', 'change') }}>
+                            <option value="">—</option>
+                            <option value="F">±1% (F)</option>
+                            <option value="G">±2% (G)</option>
+                            <option value="J">±5% (J)</option>
+                            <option value="K">±10% (K)</option>
+                            <option value="M">±20% (M)</option>
+                            <option value="C">±0.25 pF (C)</option>
+                            <option value="D">±0.5 pF (D)</option>
+                            <option value="Z">+80% / -20% (Z)</option>
+                        </select>
                     </div>
                 </div>
                 <div class="text-center mb-2" {{ stimulus_target('pages/valueCalculator', 'capSvg') }}></div>
@@ -229,7 +245,7 @@
                 <div class="row mb-3">
                     <label for="vc-smd-package" class="col-sm-3 col-form-label">{% trans %}tools.value_calc.smd.package{% endtrans %}</label>
                     <div class="col-sm-9">
-                        <select class="form-select" id="vc-smd-package"
+                        <select class="form-select" id="vc-smd-package" style="max-width: 18rem;"
                                 {{ stimulus_target('pages/valueCalculator', 'smdPackage') }}
                                 {{ stimulus_action('pages/valueCalculator', 'updateSmd', 'change') }}>
                             <option value="0201">0201 (0603 metric)</option>

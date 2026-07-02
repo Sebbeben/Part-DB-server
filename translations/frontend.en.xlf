@@ -157,40 +157,16 @@
         <target>Invalid input</target>
       </segment>
     </unit>
-    <unit id="vcalc_oor" name="tools.value_calc.out_of_range">
-      <segment state="translated">
-        <source>tools.value_calc.out_of_range</source>
-        <target>Out of range</target>
-      </segment>
-    </unit>
     <unit id="vcalc_tol" name="tools.value_calc.tolerance">
       <segment state="translated">
         <source>tools.value_calc.tolerance</source>
         <target>Tolerance</target>
       </segment>
     </unit>
-    <unit id="vcalc_unktol" name="tools.value_calc.unknown_tolerance">
-      <segment state="translated">
-        <source>tools.value_calc.unknown_tolerance</source>
-        <target>Unknown tolerance code</target>
-      </segment>
-    </unit>
     <unit id="vcalc_attach_nothing" name="tools.value_calc.attach.nothing">
       <segment state="translated">
         <source>tools.value_calc.attach.nothing</source>
         <target>Please generate an image first.</target>
-      </segment>
-    </unit>
-    <unit id="vcalc_c_code" name="tools.value_calc.capacitor.code">
-      <segment state="translated">
-        <source>tools.value_calc.capacitor.code</source>
-        <target>Code</target>
-      </segment>
-    </unit>
-    <unit id="vcalc_s_code" name="tools.value_calc.smd.code">
-      <segment state="translated">
-        <source>tools.value_calc.smd.code</source>
-        <target>SMD code</target>
       </segment>
     </unit>
     <unit id="8d38e7538" name="user.password_strength.crack_time">

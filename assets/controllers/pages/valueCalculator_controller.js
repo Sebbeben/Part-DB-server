@@ -98,7 +98,7 @@ export default class extends Controller {
     static targets = [
         "resistorSvg", "bandSelects", "resistorResult", "resistorValueInput", "resistorBodyColor",
         "resistorPower", "resistorSpec",
-        "capValueInput", "capCodeInput", "capSvg", "capResult", "capBodyColor",
+        "capValueInput", "capCodeInput", "capTolerance", "capSvg", "capResult", "capBodyColor",
         "capPitch", "capDiameter", "capVoltage", "capSpec",
         "smdValueInput", "smdCode3", "smdCode4", "smdEia96",
         "smdSvg", "smdResult", "smdBodyColor", "smdPackage", "smdSpec",
@@ -467,7 +467,7 @@ export default class extends Controller {
                 <clipPath id="${uid}clip"><rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="20" ry="20"/></clipPath>
                 ${this.shadowFilter(uid)}
             </defs>
-            <g filter="url(#${uid}shadow)">
+            <g>
                 <rect x="6" y="${cy - 5}" width="${width - 12}" height="10" rx="5" fill="url(#${uid}lead)"/>
                 <g clip-path="url(#${uid}clip)">
                     <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" fill="${body}"/>
@@ -508,8 +508,14 @@ export default class extends Controller {
             const farads = this.parseValue(raw, "F");
             pf = farads === null ? null : farads * 1e12;
         } else {
-            // Strip an optional trailing tolerance letter (e.g. the K in 104K).
-            const body = raw.trim().toUpperCase().replace(/^([0-9R]+)[A-Z]$/, "$1");
+            // Split off an optional trailing tolerance letter (e.g. the K in 104K) and,
+            // if it is a known code, reflect it in the tolerance selector.
+            const up = raw.trim().toUpperCase();
+            const letterMatch = up.match(/^([0-9R]+)([A-Z])$/);
+            const body = letterMatch ? letterMatch[1] : up;
+            if (letterMatch && this.hasCapToleranceTarget && CAP_TOLERANCE[letterMatch[2]]) {
+                this.capToleranceTarget.value = letterMatch[2];
+            }
             pf = this.capCodeToPf(body);
         }
         if (pf === null || !(pf > 0)) {
@@ -538,15 +544,25 @@ export default class extends Controller {
         }
     }
 
-    /** Draws the capacitor picture (the printed code) plus the value/spec text. */
+    /** Draws the capacitor picture (the printed code) plus the value/spec/tolerance text. */
     redrawCap() {
         if (this.capPf === null || this.capPf === undefined || !(this.capPf > 0)) {
             return;
         }
         const code = this.pfToCapCode(this.capPf);
-        this.capResultTarget.textContent =
-            `${this.formatFarads(this.capPf)} (${this.formatFarads(this.capPf, true)})`;
+        let text = `${this.formatFarads(this.capPf)} (${this.formatFarads(this.capPf, true)})`;
+        const tol = this.capToleranceText();
+        if (tol !== "") {
+            text += ` · ${trans("tools.value_calc.tolerance")}: ${tol}`;
+        }
+        this.capResultTarget.textContent = text;
         this.drawCapacitor(this.capSvgTarget, code ?? this.formatFarads(this.capPf));
+    }
+
+    /** Human-readable tolerance for the selected capacitor tolerance letter, or "". */
+    capToleranceText() {
+        const letter = this.hasCapToleranceTarget ? this.capToleranceTarget.value : "";
+        return letter && CAP_TOLERANCE[letter] ? CAP_TOLERANCE[letter] : "";
     }
 
     /**
@@ -656,7 +672,7 @@ export default class extends Controller {
                 <clipPath id="${uid}clip"><rect x="${bodyX}" y="${bodyTop}" width="${bodyW}" height="${bodyH}" rx="${rx}" ry="${rx}"/></clipPath>
                 ${this.shadowFilter(uid)}
             </defs>
-            <g filter="url(#${uid}shadow)">
+            <g>
                 <rect x="${cx - 26}" y="${bodyBottom - 14}" width="8" height="${leadLen}" rx="4" fill="url(#${uid}lead)" transform="rotate(-7 ${cx - 22} ${bodyBottom - 10})"/>
                 <rect x="${cx + 18}" y="${bodyBottom - 14}" width="8" height="${leadLen}" rx="4" fill="url(#${uid}lead)" transform="rotate(7 ${cx + 22} ${bodyBottom - 10})"/>
                 <g clip-path="url(#${uid}clip)">
@@ -1069,27 +1085,41 @@ export default class extends Controller {
     /** Draws a 3D-shaded SMD chip resistor with marking and dimension callouts. */
     drawSmd(target, marking) {
         const uid = this.svgId();
-        const w = 290;
-        const h = 168;
-        const bodyX = 40;
-        const bodyY = 30;
-        const bodyW = 202;
-        const bodyH = 72;
-        const capW = 26;
-        const cx = bodyX + bodyW / 2;
-        const cy = bodyY + bodyH / 2;
+        const w = 300;
+        const h = 190;
+        const pkgKey = this.smdPackageValue();
+        const pkg = SMD_PACKAGES[pkgKey];
+
+        // Body proportions follow the package: the length maps to a modest on-screen width
+        // (kept readable rather than true 1:1 scale) and the L:W ratio sets the height, so
+        // a 2512 looks noticeably larger than a 0402 and a 1210 looks squarer.
+        const bodyW = Math.round(120 + 90 * (pkg.l - 0.6) / (6.3 - 0.6));
+        const aspect = pkg.l / pkg.w;
+        const bodyH = Math.max(48, Math.min(122, Math.round(bodyW / aspect)));
+        const capW = Math.max(14, Math.round(bodyW * 0.13));
+
+        const cx = w / 2;
+        const bodyX = Math.round(cx - bodyW / 2);
+        const bodyY = Math.round(78 - bodyH / 2);
         const bodyBottom = bodyY + bodyH;
-        const fontSize = marking.length > 4 ? 28 : 34;
-        const fill = this.bodyColor(this.hasSmdBodyColorTarget ? this.smdBodyColorTarget : null, "#262626");
-        const textColor = this.contrastColor(fill);
+        const cy = bodyY + bodyH / 2;
 
         const innerX = bodyX + capW;
         const innerW = bodyW - 2 * capW;
-        const pkgKey = this.smdPackageValue();
-        const pkg = SMD_PACKAGES[pkgKey];
+
+        // Fit the marking inside the ceramic window (bounded by both width and height).
+        const fontSize = Math.max(14, Math.min(
+            34,
+            Math.round(bodyH * 0.5),
+            Math.round(innerW * 1.6 / Math.max(3, marking.length))
+        ));
+
+        const fill = this.bodyColor(this.hasSmdBodyColorTarget ? this.smdBodyColorTarget : null, "#262626");
+        const textColor = this.contrastColor(fill);
+
         const callouts =
-            this.dimH(bodyX, bodyX + bodyW, bodyBottom + 16, `L ${this.formatMm(pkg.l)}`)
-            + this.dimV(bodyY, bodyBottom, w - 40, `W ${this.formatMm(pkg.w)}`, bodyX + bodyW);
+            this.dimH(bodyX, bodyX + bodyW, bodyBottom + 18, `L ${this.formatMm(pkg.l)}`)
+            + this.dimV(bodyY, bodyBottom, bodyX + bodyW + 16, `W ${this.formatMm(pkg.w)}`, bodyX + bodyW);
 
         const svg = `
         <svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" style="max-width: 300px; width: 100%; height: auto;">
@@ -1100,7 +1130,7 @@ export default class extends Controller {
                 <clipPath id="${uid}clip"><rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="8" ry="8"/></clipPath>
                 ${this.shadowFilter(uid)}
             </defs>
-            <g filter="url(#${uid}shadow)">
+            <g>
                 <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="8" ry="8" fill="url(#${uid}metal)" stroke="#00000055" stroke-width="1"/>
                 <g clip-path="url(#${uid}clip)">
                     <rect x="${innerX}" y="${bodyY}" width="${innerW}" height="${bodyH}" fill="${fill}"/>

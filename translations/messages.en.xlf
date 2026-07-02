@@ -13223,54 +13223,6 @@ Buerklin-API Authentication server:
         <target>Works for the printed number codes on ceramic (MLCC), film and similar capacitors. Small caps below 100 pF are usually printed directly (e.g. 47 or 4R7), larger ones use the 3-digit code (e.g. 104 = 100 nF).</target>
       </segment>
     </unit>
-    <unit id="vcalc_c_dectitle" name="tools.value_calc.capacitor.decode_title">
-      <segment state="translated">
-        <source>tools.value_calc.capacitor.decode_title</source>
-        <target>Code → value</target>
-      </segment>
-    </unit>
-    <unit id="vcalc_c_dechelp" name="tools.value_calc.capacitor.decode_help">
-      <segment state="translated">
-        <source>tools.value_calc.capacitor.decode_help</source>
-        <target>Enter a printed capacitor code, optionally with a tolerance letter (e.g. 104K).</target>
-      </segment>
-    </unit>
-    <unit id="vcalc_c_enctitle" name="tools.value_calc.capacitor.encode_title">
-      <segment state="translated">
-        <source>tools.value_calc.capacitor.encode_title</source>
-        <target>Value → code</target>
-      </segment>
-    </unit>
-    <unit id="vcalc_c_enchelp" name="tools.value_calc.capacitor.encode_help">
-      <segment state="translated">
-        <source>tools.value_calc.capacitor.encode_help</source>
-        <target>Enter a capacitance (e.g. 100nF) to get the 3-digit code.</target>
-      </segment>
-    </unit>
-    <unit id="vcalc_s_dectitle" name="tools.value_calc.smd.decode_title">
-      <segment state="translated">
-        <source>tools.value_calc.smd.decode_title</source>
-        <target>SMD code → value</target>
-      </segment>
-    </unit>
-    <unit id="vcalc_s_dechelp" name="tools.value_calc.smd.decode_help">
-      <segment state="translated">
-        <source>tools.value_calc.smd.decode_help</source>
-        <target>Enter an SMD resistor marking. Supports 3-digit (472), 4-digit (4701), R-notation (4R7) and EIA-96 (01C) codes.</target>
-      </segment>
-    </unit>
-    <unit id="vcalc_s_enctitle" name="tools.value_calc.smd.encode_title">
-      <segment state="translated">
-        <source>tools.value_calc.smd.encode_title</source>
-        <target>Value → SMD code</target>
-      </segment>
-    </unit>
-    <unit id="vcalc_s_enchelp" name="tools.value_calc.smd.encode_help">
-      <segment state="translated">
-        <source>tools.value_calc.smd.encode_help</source>
-        <target>Enter a resistance (e.g. 4k7) to get the 3-digit SMD marking.</target>
-      </segment>
-    </unit>
     <unit id="vcalc_s_onchiphelp" name="tools.value_calc.smd.on_chip_help">
       <segment state="translated">
         <source>tools.value_calc.smd.on_chip_help</source>
@@ -13287,6 +13239,12 @@ Buerklin-API Authentication server:
       <segment state="translated">
         <source>tools.value_calc.field.code</source>
         <target>Code</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_f_tol" name="tools.value_calc.field.tolerance">
+      <segment state="translated">
+        <source>tools.value_calc.field.tolerance</source>
+        <target>Tolerance</target>
       </segment>
     </unit>
     <unit id="vcalc_f_code3" name="tools.value_calc.field.code3">

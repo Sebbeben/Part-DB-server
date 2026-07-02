@@ -53,6 +53,13 @@ class GeneratedImageAttachmentHelper
      */
     public function attachSvgToPart(Part $part, string $svg, string $name, bool $setAsPreview = true): PartAttachment
     {
+        //handleUpload() does not enforce the upload-size limit, so guard it here. The SVG is
+        //stored roughly 1:1 (base64 is only the transport encoding), so its byte length is a
+        //good proxy for the resulting file size.
+        if (strlen($svg) > $this->submitHandler->getMaximumAllowedUploadSize()) {
+            throw new \RuntimeException('The generated image exceeds the maximum allowed upload size.');
+        }
+
         $type = $this->getGeneratedImageType();
 
         $attachment = new PartAttachment();
