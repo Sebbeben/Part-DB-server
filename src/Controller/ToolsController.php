@@ -158,6 +158,8 @@ class ToolsController extends AbstractController
             'part' => $part,
             'prefill_ohms' => $prefillOhms,
             'prefill_farads' => $prefillFarads,
+            //When embedded in the part-page modal, render only the calculator inside a Turbo frame.
+            'modalMode' => $request->query->getBoolean('modal'),
         ]);
     }
 
