@@ -13142,7 +13142,7 @@ Buerklin-API Authentication server:
     <unit id="vcalc_attach_generate_hint" name="tools.value_calc.attach.generate_hint">
       <segment state="translated">
         <source>tools.value_calc.attach.generate_hint</source>
-        <target>Opens in a new tab. Save any unsaved changes here first.</target>
+        <target>Save your other changes first — attaching adds the picture and reloads this page to show it.</target>
       </segment>
     </unit>
     <unit id="vcalc_gen_flash_success" name="part.generate_image.flash.success">

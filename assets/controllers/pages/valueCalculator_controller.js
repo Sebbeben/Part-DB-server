@@ -252,11 +252,11 @@ export default class extends Controller {
             }
         }
 
-        if (/\/edit\/?$/.test(window.location.pathname)) {
-            AlertSwal.fire({title: message, icon: "success", timer: 2200, showConfirmButton: false});
-        } else {
-            window.location.reload();
-        }
+        // Reload so the new attachment shows and the edit form becomes aware of it. This matters
+        // on the edit page: the attachments collection uses orphanRemoval, so saving a stale form
+        // (that doesn't yet know about the AJAX-added image) would delete it. If there are unsaved
+        // edits the browser will prompt on reload — hence the "save changes first" hint.
+        window.location.reload();
     }
 
     /*
