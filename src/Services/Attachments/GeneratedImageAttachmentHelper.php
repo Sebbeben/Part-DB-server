@@ -53,9 +53,13 @@ class GeneratedImageAttachmentHelper
      */
     public function attachSvgToPart(Part $part, string $svg, string $name, bool $setAsPreview = true): PartAttachment
     {
+        $type = $this->getGeneratedImageType();
+
         $attachment = new PartAttachment();
-        $attachment->setName($name !== '' ? $name : 'Generated image');
-        $attachment->setAttachmentType($this->getGeneratedImageType());
+        //De-duplicate the name so generating the same image twice does not violate the
+        //(name, attachment_type, element) unique constraint on PartAttachment.
+        $attachment->setName($this->uniqueName($part, $name !== '' ? $name : 'Generated image', $type));
+        $attachment->setAttachmentType($type);
         $part->addAttachment($attachment);
 
         //Reuse the regular upload pipeline so the SVG is sanitized and (optionally) becomes the preview image.
@@ -75,6 +79,31 @@ class GeneratedImageAttachmentHelper
         $this->em->persist($attachment);
 
         return $attachment;
+    }
+
+    /**
+     * Builds a name that is unique among the part's attachments of the given type,
+     * appending " (2)", " (3)", … on collision (mirrors the info-provider importer).
+     */
+    private function uniqueName(Part $part, string $baseName, AttachmentType $type): string
+    {
+        $taken = [];
+        foreach ($part->getAttachments() as $existing) {
+            if ($existing->getAttachmentType()?->getName() === $type->getName()) {
+                $taken[] = $existing->getName();
+            }
+        }
+
+        if (!in_array($baseName, $taken, true)) {
+            return $baseName;
+        }
+
+        $i = 2;
+        while (in_array($baseName.' ('.$i.')', $taken, true)) {
+            $i++;
+        }
+
+        return $baseName.' ('.$i.')';
     }
 
     /**

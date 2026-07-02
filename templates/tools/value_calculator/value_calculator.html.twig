@@ -12,6 +12,8 @@
     <div {{ stimulus_controller('pages/valueCalculator', part is not null ? {
         endpoint: path('part_generate_image', {id: part.id}),
         csrf: csrf_token('generate_image' ~ part.id),
+        prefillOhms: prefill_ohms|default(0),
+        prefillFarads: prefill_farads|default(0),
     } : {}) }}>
         {% if part is not null %}
             <div class="alert alert-info d-flex flex-wrap align-items-center gap-3">

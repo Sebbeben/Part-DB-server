@@ -226,9 +226,15 @@ final class PartController extends AbstractController
         $name = trim((string) $request->request->get('name', ''));
         $setAsPreview = $request->request->getBoolean('preview', true);
 
-        $helper->attachSvgToPart($part, $svg, $name !== '' ? $name : 'Generated image', $setAsPreview);
-        $this->commentHelper->setMessage('Generated component image');
-        $this->em->flush();
+        //Guard the persistence so a storage/validation failure shows a flash instead of a 500.
+        try {
+            $helper->attachSvgToPart($part, $svg, $name !== '' ? $name : 'Generated image', $setAsPreview);
+            $this->commentHelper->setMessage('Generated component image');
+            $this->em->flush();
+        } catch (\Throwable) {
+            $this->addFlash('error', 'part.generate_image.flash.invalid');
+            return $this->redirectToRoute('part_info', ['id' => $part->getID()]);
+        }
 
         $this->addFlash('success', 'part.generate_image.flash.success');
 

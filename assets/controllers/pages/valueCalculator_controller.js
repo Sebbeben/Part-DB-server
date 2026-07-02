@@ -108,34 +108,66 @@ export default class extends Controller {
     static values = {
         endpoint: String,
         csrf: String,
+        prefillOhms: { type: Number, default: 0 },
+        prefillFarads: { type: Number, default: 0 },
     };
 
     connect() {
         this.bandCount = 5;
         this.renderBandSelects();
-        // Sensible default: 4.7 kΩ ±1%
-        this.setBandsFromValue(4700, 1);
-        this.updateResistor();
         this.updateCapSpec();
 
-        // Preload each tab with a live example so nothing starts empty. Each section is
-        // isolated so a failure in one can't block the others (and surfaces on screen).
-        try {
-            this.capPf = 100000; // 100 nF
-            this.setCapFields(this.capPf, null);
-            this.redrawCap();
-        } catch (e) {
-            console.error("value_calc: capacitor demo failed", e);
-            if (this.hasCapResultTarget) this.capResultTarget.textContent = "demo error: " + e.message;
+        // When opened from a part, pre-fill with the part's detected resistance/capacitance;
+        // otherwise fall back to illustrative demo values so nothing starts empty. Each section
+        // is isolated so a failure in one can't block the others (and surfaces on screen).
+        const partOhms = this.prefillOhmsValue > 0 ? this.prefillOhmsValue : null;
+        const partFarads = this.prefillFaradsValue > 0 ? this.prefillFaradsValue : null;
+
+        const resistorOhms = partOhms ?? 4700;
+        if (!this.setBandsFromValue(resistorOhms, 1) && this.hasResistorValueInputTarget) {
+            // Not representable as standard color bands: show it in the value input instead.
+            this.resistorValueInputTarget.value = this.formatOhms(resistorOhms);
         }
+        this.updateResistor();
+
         try {
             this.smdMarking = "code3";
-            this.smdOhms = 4700; // 4.7 kΩ
+            // 10 kΩ demo has a clean code in every representation (103 / 1002 / 01C) so the
+            // EIA-96 field isn't "—" on first open, unlike an E24 value such as 4.7 kΩ.
+            this.smdOhms = partOhms ?? 10000;
             this.setSmdFields(this.smdOhms, null);
             this.redrawSmd();
         } catch (e) {
-            console.error("value_calc: SMD demo failed", e);
-            if (this.hasSmdResultTarget) this.smdResultTarget.textContent = "demo error: " + e.message;
+            console.error("value_calc: SMD init failed", e);
+            if (this.hasSmdResultTarget) this.smdResultTarget.textContent = "error: " + e.message;
+        }
+        try {
+            this.capPf = (partFarads ?? 100e-9) * 1e12;
+            this.setCapFields(this.capPf, null);
+            this.redrawCap();
+        } catch (e) {
+            console.error("value_calc: capacitor init failed", e);
+            if (this.hasCapResultTarget) this.capResultTarget.textContent = "error: " + e.message;
+        }
+
+        // Jump to the tab matching the part's detected type.
+        if (partFarads !== null && partOhms === null) {
+            this.activateTab("vc-capacitor-tab");
+        } else if (partOhms !== null) {
+            this.activateTab("vc-resistor-tab");
+        }
+    }
+
+    /** Activates a Bootstrap tab by its button id (no-op if unavailable). */
+    activateTab(id) {
+        const btn = document.getElementById(id);
+        if (!btn) {
+            return;
+        }
+        try {
+            btn.click();
+        } catch (e) {
+            /* ignore — the default tab is fine */
         }
     }
 
