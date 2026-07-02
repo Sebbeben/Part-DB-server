@@ -236,13 +236,27 @@ export default class extends Controller {
             });
     }
 
-    /** After a successful attach: close the generator modal (if any) and confirm, without navigating. */
+    /**
+     * After a successful attach: close the generator modal (via its dismiss control, which works
+     * even when Bootstrap isn't exposed globally), then either reload the read-only part page so
+     * the new picture shows, or — on the edit form — just toast so unsaved changes aren't lost.
+     */
     finishAttach(message) {
         const modalEl = document.getElementById("vcGenerateModal");
-        if (modalEl && window.bootstrap && window.bootstrap.Modal) {
-            window.bootstrap.Modal.getInstance(modalEl)?.hide();
+        if (modalEl) {
+            const dismiss = modalEl.querySelector("[data-bs-dismiss='modal']");
+            if (dismiss) {
+                dismiss.click();
+            } else {
+                window.bootstrap?.Modal?.getInstance(modalEl)?.hide();
+            }
         }
-        AlertSwal.fire({title: message, icon: "success", timer: 2200, showConfirmButton: false});
+
+        if (/\/edit\/?$/.test(window.location.pathname)) {
+            AlertSwal.fire({title: message, icon: "success", timer: 2200, showConfirmButton: false});
+        } else {
+            window.location.reload();
+        }
     }
 
     /*
