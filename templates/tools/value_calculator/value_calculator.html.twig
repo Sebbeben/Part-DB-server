@@ -49,7 +49,7 @@
             <div class="tab-pane fade show active" id="vc-resistor" role="tabpanel" data-vc-name="{% trans %}tools.value_calc.resistor.title{% endtrans %}">
                 <div class="row mb-2">
                     <div class="col-12">
-                        <div class="svg-container text-center">{{ '' }}
+                        <div class="svg-container text-center bg-light rounded p-2 mx-auto" style="max-width: 480px;">{{ '' }}
                             <div {{ stimulus_target('pages/valueCalculator', 'resistorSvg') }}></div>
                         </div>
                         <div class="text-center text-muted small mb-2" {{ stimulus_target('pages/valueCalculator', 'resistorSpec') }}></div>
@@ -218,7 +218,7 @@
                         </select>
                     </div>
                 </div>
-                <div class="text-center mb-2" {{ stimulus_target('pages/valueCalculator', 'capSvg') }}></div>
+                <div class="text-center mb-2 bg-light rounded p-2 mx-auto" style="max-width: 480px;" {{ stimulus_target('pages/valueCalculator', 'capSvg') }}></div>
                 <div class="alert alert-secondary" {{ stimulus_target('pages/valueCalculator', 'capResult') }}></div>
             </div>
 
@@ -300,7 +300,7 @@
                                {{ stimulus_action('pages/valueCalculator', 'syncSmd', 'input') }}>
                     </div>
                 </div>
-                <div class="text-center mb-1" {{ stimulus_target('pages/valueCalculator', 'smdSvg') }}></div>
+                <div class="text-center mb-1 bg-light rounded p-2 mx-auto" style="max-width: 480px;" {{ stimulus_target('pages/valueCalculator', 'smdSvg') }}></div>
                 <div class="text-center text-muted small mb-2" {{ stimulus_target('pages/valueCalculator', 'smdSpec') }}></div>
                 <div class="alert alert-secondary" {{ stimulus_target('pages/valueCalculator', 'smdResult') }}></div>
             </div>
