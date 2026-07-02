@@ -216,11 +216,12 @@ final class PartController extends AbstractController
             throw $this->createAccessDeniedException('Invalid CSRF token');
         }
 
+        $ajax = $request->isXmlHttpRequest();
+
         $svg = (string) $request->request->get('svg', '');
         //Basic guard: the payload must look like an SVG image (it is sanitized again on storage)
         if ($svg === '' || !str_contains($svg, '<svg')) {
-            $this->addFlash('error', 'part.generate_image.flash.invalid');
-            return $this->redirectToRoute('part_info', ['id' => $part->getID()]);
+            return $this->generateImageResult($part, false, 'part.generate_image.flash.invalid', $ajax);
         }
 
         $name = trim((string) $request->request->get('name', ''));
@@ -232,11 +233,26 @@ final class PartController extends AbstractController
             $this->commentHelper->setMessage('Generated component image');
             $this->em->flush();
         } catch (\Throwable) {
-            $this->addFlash('error', 'part.generate_image.flash.invalid');
-            return $this->redirectToRoute('part_info', ['id' => $part->getID()]);
+            return $this->generateImageResult($part, false, 'part.generate_image.flash.invalid', $ajax);
         }
 
-        $this->addFlash('success', 'part.generate_image.flash.success');
+        return $this->generateImageResult($part, true, 'part.generate_image.flash.success', $ajax);
+    }
+
+    /**
+     * Returns the outcome of a generate-image request as JSON (for the modal/AJAX flow) or as a
+     * flash + redirect (for a normal form submit).
+     */
+    private function generateImageResult(Part $part, bool $success, string $messageKey, bool $ajax): Response
+    {
+        if ($ajax) {
+            return $this->json([
+                'success' => $success,
+                'message' => $this->translator->trans($messageKey),
+            ], $success ? Response::HTTP_OK : Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $this->addFlash($success ? 'success' : 'error', $messageKey);
 
         return $this->redirectToRoute('part_info', ['id' => $part->getID()]);
     }

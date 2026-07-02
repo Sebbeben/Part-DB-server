@@ -172,9 +172,9 @@ export default class extends Controller {
     }
 
     /**
-     * Posts the currently shown SVG of the chosen picture to the server so it gets
-     * attached to the part the calculator was opened for. A normal form submit is
-     * used so the server-side redirect and flash message just work.
+     * Posts the currently shown SVG of the chosen picture to the server so it gets attached to
+     * the part. Uses a background request so the modal can close without navigating away (which
+     * would otherwise trigger the browser's "unsaved changes" prompt and lose the edit form).
      */
     attachToPart(event) {
         if (!this.hasEndpointValue) {
@@ -193,22 +193,41 @@ export default class extends Controller {
         }
 
         const preview = this.hasPreviewInputTarget ? this.previewInputTarget.checked : true;
-        const form = document.createElement("form");
-        form.method = "post";
-        form.action = this.endpointValue;
-        const add = (name, value) => {
-            const input = document.createElement("input");
-            input.type = "hidden";
-            input.name = name;
-            input.value = value;
-            form.appendChild(input);
-        };
-        add("svg", svg);
-        add("name", event.currentTarget.dataset.name || "");
-        add("preview", preview ? "1" : "0");
-        add("_token", this.csrfValue);
-        document.body.appendChild(form);
-        form.submit();
+        const btn = event.currentTarget;
+        const body = new FormData();
+        body.append("svg", svg);
+        body.append("name", btn.dataset.name || "");
+        body.append("preview", preview ? "1" : "0");
+        body.append("_token", this.csrfValue);
+
+        btn.disabled = true;
+        fetch(this.endpointValue, {
+            method: "POST",
+            body,
+            headers: {"X-Requested-With": "XMLHttpRequest"},
+        })
+            .then((r) => r.json().then((data) => ({ok: r.ok, data})))
+            .then(({ok, data}) => {
+                btn.disabled = false;
+                if (ok && data && data.success) {
+                    this.finishAttach(data.message);
+                } else {
+                    AlertSwal.fire({title: (data && data.message) || trans("tools.value_calc.invalid_input")});
+                }
+            })
+            .catch(() => {
+                btn.disabled = false;
+                AlertSwal.fire({title: trans("tools.value_calc.invalid_input")});
+            });
+    }
+
+    /** After a successful attach: close the generator modal (if any) and confirm, without navigating. */
+    finishAttach(message) {
+        const modalEl = document.getElementById("vcGenerateModal");
+        if (modalEl && window.bootstrap && window.bootstrap.Modal) {
+            window.bootstrap.Modal.getInstance(modalEl)?.hide();
+        }
+        AlertSwal.fire({title: message, icon: "success", timer: 2200, showConfirmButton: false});
     }
 
     /*
