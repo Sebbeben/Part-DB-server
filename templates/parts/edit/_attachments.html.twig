@@ -2,9 +2,10 @@
 
 {% if part.id is not null and is_granted('@tools.value_calculator') %}
     <div class="mb-3">
-        {% include "tools/value_calculator/_generate_button_modal.html.twig" %}
+        {% include "tools/value_calculator/_generate_button.html.twig" %}
         <small class="text-muted ms-2">{% trans %}tools.value_calc.attach.generate_hint{% endtrans %}</small>
     </div>
+    {% include "tools/value_calculator/_generate_modal.html.twig" %}
 {% endif %}
 
 {{ form_row(form.master_picture_attachment) }}

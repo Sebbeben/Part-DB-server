@@ -177,30 +177,41 @@ export default class extends Controller {
      * would otherwise trigger the browser's "unsaved changes" prompt and lose the edit form).
      */
     attachToPart(event) {
-        if (!this.hasEndpointValue) {
+        const active = this.element.querySelector(".tab-pane.active");
+        if (!active) {
             return;
         }
         const containers = {
-            resistor: this.hasResistorSvgTarget ? this.resistorSvgTarget : null,
-            cap: this.hasCapSvgTarget ? this.capSvgTarget : null,
-            smd: this.hasSmdSvgTarget ? this.smdSvgTarget : null,
+            "vc-resistor": this.hasResistorSvgTarget ? this.resistorSvgTarget : null,
+            "vc-capacitor": this.hasCapSvgTarget ? this.capSvgTarget : null,
+            "vc-smd": this.hasSmdSvgTarget ? this.smdSvgTarget : null,
         };
-        const container = containers[event.currentTarget.dataset.svg];
+        const container = containers[active.id];
         const svg = container ? container.innerHTML.trim() : "";
+        const name = active.dataset.vcName || "Generated image";
+        this.doAttach(svg, name, event.currentTarget);
+    }
+
+    /** Sends one SVG to the server to be attached to the part (background request, no navigation). */
+    doAttach(svg, name, btn) {
+        if (!this.hasEndpointValue) {
+            return;
+        }
         if (!svg.includes("<svg")) {
             AlertSwal.fire({title: trans("tools.value_calc.attach.nothing")});
             return;
         }
 
         const preview = this.hasPreviewInputTarget ? this.previewInputTarget.checked : true;
-        const btn = event.currentTarget;
         const body = new FormData();
         body.append("svg", svg);
-        body.append("name", btn.dataset.name || "");
+        body.append("name", name || "");
         body.append("preview", preview ? "1" : "0");
         body.append("_token", this.csrfValue);
 
-        btn.disabled = true;
+        if (btn) {
+            btn.disabled = true;
+        }
         fetch(this.endpointValue, {
             method: "POST",
             body,
@@ -208,7 +219,9 @@ export default class extends Controller {
         })
             .then((r) => r.json().then((data) => ({ok: r.ok, data})))
             .then(({ok, data}) => {
-                btn.disabled = false;
+                if (btn) {
+                    btn.disabled = false;
+                }
                 if (ok && data && data.success) {
                     this.finishAttach(data.message);
                 } else {
@@ -216,7 +229,9 @@ export default class extends Controller {
                 }
             })
             .catch(() => {
-                btn.disabled = false;
+                if (btn) {
+                    btn.disabled = false;
+                }
                 AlertSwal.fire({title: trans("tools.value_calc.invalid_input")});
             });
     }
