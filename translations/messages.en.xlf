@@ -13091,6 +13091,24 @@ Buerklin-API Authentication server:
         <target>Picture appearance</target>
       </segment>
     </unit>
+    <unit id="bulkgen_kicad" name="tools.bulk_gen.kicad">
+      <segment state="translated">
+        <source>tools.bulk_gen.kicad</source>
+        <target>KiCad</target>
+      </segment>
+    </unit>
+    <unit id="bulkgen_write_eda" name="tools.bulk_gen.write_eda">
+      <segment state="translated">
+        <source>tools.bulk_gen.write_eda</source>
+        <target>Write KiCad settings to checked parts</target>
+      </segment>
+    </unit>
+    <unit id="bulkgen_eda_written" name="tools.bulk_gen.eda_written">
+      <segment state="translated">
+        <source>tools.bulk_gen.eda_written</source>
+        <target>EDA settings written</target>
+      </segment>
+    </unit>
     <unit id="bulkgen_genattach" name="tools.bulk_gen.generate_attach">
       <segment state="translated">
         <source>tools.bulk_gen.generate_attach</source>

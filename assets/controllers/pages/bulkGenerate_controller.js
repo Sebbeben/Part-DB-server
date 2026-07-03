@@ -26,7 +26,7 @@ import {trans} from "../../translator.js";
  * checked ones to their parts via the per-part generate-image endpoint (with a progress bar).
  */
 export default class extends Controller {
-    static targets = ["row", "progress", "progressBar", "attachBtn", "batchPitch", "batchDiameter", "batchColor"];
+    static targets = ["row", "progress", "progressBar", "attachBtn", "edaBtn", "batchPitch", "batchDiameter", "batchColor"];
 
     connect() {
         this.tryRenderPreviews(0);
@@ -104,18 +104,57 @@ export default class extends Controller {
         });
     }
 
-    async attachSelected() {
+    /** Attaches the generated picture of each checked row to its part. */
+    attachSelected() {
+        return this.runBatch(
+            (row) => {
+                if (!(row.dataset.svg || "").includes("<svg")) {
+                    return null;
+                }
+                const body = new FormData();
+                body.append("svg", row.dataset.svg);
+                body.append("name", row.dataset.name || "Generated image");
+                body.append("preview", "1");
+                body.append("_token", row.dataset.csrf || "");
+                return {url: row.dataset.endpoint, body};
+            },
+            trans("tools.bulk_gen.attached"),
+            this.hasAttachBtnTarget ? this.attachBtnTarget : null
+        );
+    }
+
+    /** Writes the suggested KiCad symbol / footprint / reference of each checked row to its part. */
+    writeEda() {
+        return this.runBatch(
+            (row) => {
+                const body = new FormData();
+                body.append("kicad_symbol", row.dataset.kicadSymbol || "");
+                body.append("reference_prefix", row.dataset.referencePrefix || "");
+                body.append("kicad_footprint", row.dataset.kicadFootprint || "");
+                body.append("_token", row.dataset.edaCsrf || "");
+                return {url: row.dataset.edaEndpoint, body};
+            },
+            trans("tools.bulk_gen.eda_written"),
+            this.hasEdaBtnTarget ? this.edaBtnTarget : null
+        );
+    }
+
+    /**
+     * Runs a POST for every checked row, updating the progress bar. buildRequest(row) returns
+     * {url, body} or null to skip the row.
+     */
+    async runBatch(buildRequest, doneWord, btn) {
         const rows = this.rowTargets.filter((row) => {
             const cb = row.querySelector("input[type=checkbox]");
-            return cb && cb.checked && (row.dataset.svg || "").includes("<svg");
+            return cb && cb.checked;
         });
         if (rows.length === 0) {
             AlertSwal.fire({title: trans("tools.value_calc.attach.nothing")});
             return;
         }
 
-        if (this.hasAttachBtnTarget) {
-            this.attachBtnTarget.disabled = true;
+        if (btn) {
+            btn.disabled = true;
         }
         if (this.hasProgressTarget) {
             this.progressTarget.classList.remove("d-none");
@@ -125,18 +164,14 @@ export default class extends Controller {
         let ok = 0;
         let failed = 0;
         for (const row of rows) {
-            const body = new FormData();
-            body.append("svg", row.dataset.svg);
-            body.append("name", row.dataset.name || "Generated image");
-            body.append("preview", "1");
-            body.append("_token", row.dataset.csrf || "");
-
+            const req = buildRequest(row);
+            if (!req) {
+                done++;
+                this.updateProgress(done, rows.length);
+                continue;
+            }
             try {
-                const resp = await fetch(row.dataset.endpoint, {
-                    method: "POST",
-                    body,
-                    headers: {"X-Requested-With": "XMLHttpRequest"},
-                });
+                const resp = await fetch(req.url, {method: "POST", body: req.body, headers: {"X-Requested-With": "XMLHttpRequest"}});
                 const data = await resp.json().catch(() => ({}));
                 if (resp.ok && data && data.success) {
                     ok++;
@@ -153,11 +188,11 @@ export default class extends Controller {
             this.updateProgress(done, rows.length);
         }
 
-        if (this.hasAttachBtnTarget) {
-            this.attachBtnTarget.disabled = false;
+        if (btn) {
+            btn.disabled = false;
         }
         AlertSwal.fire({
-            title: `${ok} / ${rows.length} ${trans("tools.bulk_gen.attached")}${failed ? ` · ${failed} ${trans("tools.bulk_gen.failed")}` : ""}`,
+            title: `${ok} / ${rows.length} ${doneWord}${failed ? ` · ${failed} ${trans("tools.bulk_gen.failed")}` : ""}`,
             icon: failed ? "warning" : "success",
         });
     }

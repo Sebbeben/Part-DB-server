@@ -192,6 +192,7 @@ class ToolsController extends AbstractController
                     $skipped++;
                     continue;
                 }
+                $eda = $guesser->edaSuggestion($guess['type'], $guess['package']);
                 $candidates[] = [
                     'part' => $part,
                     'type' => $guess['type'],
@@ -201,6 +202,9 @@ class ToolsController extends AbstractController
                     'tolerance' => $guess['tolerance'],
                     'pitch' => $guess['pitch'],
                     'diameter' => $guess['diameter'],
+                    'kicad_symbol' => $eda['symbol'],
+                    'reference_prefix' => $eda['reference'],
+                    'kicad_footprint' => $eda['footprint'],
                 ];
             }
         }

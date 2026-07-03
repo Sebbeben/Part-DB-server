@@ -69,6 +69,7 @@
                             <th>{% trans %}tools.bulk_gen.value{% endtrans %}</th>
                             <th>{% trans %}tools.value_calc.cap.voltage{% endtrans %}</th>
                             <th>{% trans %}tools.value_calc.field.tolerance{% endtrans %}</th>
+                            <th>{% trans %}tools.bulk_gen.kicad{% endtrans %}</th>
                             <th>{% trans %}tools.bulk_gen.preview{% endtrans %}</th>
                         </tr>
                     </thead>
@@ -85,13 +86,22 @@
                                 data-diameter="{{ c.diameter }}"
                                 data-name="{{ name_key|trans }}"
                                 data-endpoint="{{ path('part_generate_image', {id: c.part.id}) }}"
-                                data-csrf="{{ csrf_token('generate_image' ~ c.part.id) }}">
+                                data-csrf="{{ csrf_token('generate_image' ~ c.part.id) }}"
+                                data-kicad-symbol="{{ c.kicad_symbol }}"
+                                data-reference-prefix="{{ c.reference_prefix }}"
+                                data-kicad-footprint="{{ c.kicad_footprint }}"
+                                data-eda-endpoint="{{ path('part_set_eda', {id: c.part.id}) }}"
+                                data-eda-csrf="{{ csrf_token('set_eda' ~ c.part.id) }}">
                                 <td><input class="form-check-input" type="checkbox" checked></td>
                                 <td><a href="{{ path('part_info', {id: c.part.id}) }}" target="_blank" rel="noopener">{{ c.part.name }}</a></td>
                                 <td><span class="badge bg-secondary">{{ c.type }}</span></td>
                                 <td>{% if c.type == 'capacitor' %}{{ (c.value * 1e12)|round(2) }} pF{% else %}{{ c.value|round(3) }} Ω{% endif %}{% if c.package %} · {{ c.package }}{% endif %}</td>
                                 <td>{{ c.voltage ? c.voltage ~ ' V' : '—' }}</td>
                                 <td>{{ c.tolerance ?: '—' }}</td>
+                                <td class="small">
+                                    <div><code>{{ c.kicad_symbol }}</code>{% if c.reference_prefix %} <span class="text-muted">({{ c.reference_prefix }})</span>{% endif %}</div>
+                                    {% if c.kicad_footprint %}<div class="text-muted text-truncate" style="max-width: 200px;" title="{{ c.kicad_footprint }}">{{ c.kicad_footprint }}</div>{% endif %}
+                                </td>
                                 <td><div data-bulk-preview class="bg-light rounded p-1" style="width: 170px;"></div></td>
                             </tr>
                         {% endfor %}
@@ -99,11 +109,14 @@
                 </table>
             </div>
 
-            <div class="d-flex align-items-center gap-3 mb-2">
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
                 <button type="button" class="btn btn-success" {{ stimulus_target('pages/bulkGenerate', 'attachBtn') }} {{ stimulus_action('pages/bulkGenerate', 'attachSelected') }}>
                     <i class="fas fa-paperclip"></i> {% trans %}tools.bulk_gen.generate_attach{% endtrans %}
                 </button>
-                <div class="progress flex-grow-1 d-none" style="height: 1.5rem;" {{ stimulus_target('pages/bulkGenerate', 'progress') }}>
+                <button type="button" class="btn btn-primary" {{ stimulus_target('pages/bulkGenerate', 'edaBtn') }} {{ stimulus_action('pages/bulkGenerate', 'writeEda') }}>
+                    <i class="fas fa-microchip"></i> {% trans %}tools.bulk_gen.write_eda{% endtrans %}
+                </button>
+                <div class="progress flex-grow-1 d-none" style="height: 1.5rem; min-width: 12rem;" {{ stimulus_target('pages/bulkGenerate', 'progress') }}>
                     <div class="progress-bar" role="progressbar" style="width: 0" {{ stimulus_target('pages/bulkGenerate', 'progressBar') }}>0/0</div>
                 </div>
             </div>

@@ -240,6 +240,45 @@ final class PartController extends AbstractController
     }
 
     /**
+     * Writes the KiCad/EDA fields (symbol, footprint, reference prefix) of a part. Used by the bulk
+     * image generator to assign EDA settings to a whole assortment at once.
+     */
+    #[Route(path: '/{id}/set_eda', name: 'part_set_eda', methods: ['POST'])]
+    public function setEda(Part $part, Request $request): Response
+    {
+        $this->denyAccessUnlessGranted('edit', $part);
+
+        if (!$this->isCsrfTokenValid('set_eda' . $part->getID(), $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token');
+        }
+
+        $eda = $part->getEdaInfo();
+        if ($request->request->has('kicad_symbol')) {
+            $eda->setKicadSymbol(trim((string) $request->request->get('kicad_symbol')) ?: null);
+        }
+        if ($request->request->has('reference_prefix')) {
+            $eda->setReferencePrefix(trim((string) $request->request->get('reference_prefix')) ?: null);
+        }
+        if ($request->request->has('kicad_footprint')) {
+            $eda->setKicadFootprint(trim((string) $request->request->get('kicad_footprint')) ?: null);
+        }
+
+        $ajax = $request->isXmlHttpRequest();
+        try {
+            $this->commentHelper->setMessage('Bulk EDA settings');
+            $this->em->flush();
+        } catch (\Throwable) {
+            return $ajax
+                ? $this->json(['success' => false], Response::HTTP_UNPROCESSABLE_ENTITY)
+                : $this->redirectToRoute('part_info', ['id' => $part->getID()]);
+        }
+
+        return $ajax
+            ? $this->json(['success' => true])
+            : $this->redirectToRoute('part_info', ['id' => $part->getID()]);
+    }
+
+    /**
      * Returns the outcome of a generate-image request as JSON (for the modal/AJAX flow) or as a
      * flash + redirect (for a normal form submit).
      */

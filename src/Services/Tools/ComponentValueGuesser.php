@@ -35,6 +35,31 @@ class ComponentValueGuesser
     /** Imperial SMD chip package codes that mark a part as surface-mount. */
     private const SMD_PACKAGES = ['01005', '0201', '0402', '0603', '0805', '1206', '1210', '2010', '2512'];
 
+    /** Imperial -> metric size, for building KiCad SMD footprint names. */
+    private const SMD_METRIC = [
+        '0201' => '0603', '0402' => '1005', '0603' => '1608', '0805' => '2012',
+        '1206' => '3216', '1210' => '3225', '2010' => '5025', '2512' => '6332',
+    ];
+
+    /**
+     * Suggested KiCad/EDA settings for a classified component.
+     *
+     * @return array{symbol: string, reference: string, footprint: string|null}
+     */
+    public function edaSuggestion(string $type, ?string $package): array
+    {
+        if ($type === 'capacitor') {
+            return ['symbol' => 'Device:C', 'reference' => 'C', 'footprint' => null];
+        }
+
+        $footprint = null;
+        if ($type === 'smd_resistor' && $package !== null && isset(self::SMD_METRIC[$package])) {
+            $footprint = 'Resistor_SMD:R_'.$package.'_'.self::SMD_METRIC[$package].'Metric';
+        }
+
+        return ['symbol' => 'Device:R', 'reference' => 'R', 'footprint' => $footprint];
+    }
+
     /**
      * Classifies a part.
      *
