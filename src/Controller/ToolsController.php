@@ -23,7 +23,9 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Entity\Parts\Part;
+use App\Entity\Parts\StorageLocation;
 use App\Services\Attachments\AttachmentSubmitHandler;
+use App\Services\Tools\ComponentValueGuesser;
 use App\Services\Attachments\AttachmentURLGenerator;
 use App\Services\Attachments\BuiltinAttachmentsFinder;
 use App\Services\Doctrine\DBInfoHelper;
@@ -134,7 +136,7 @@ class ToolsController extends AbstractController
     }
 
     #[Route(path: '/value_calc', name: 'tools_value_calculator')]
-    public function valueCalculator(Request $request, EntityManagerInterface $em): Response
+    public function valueCalculator(Request $request, EntityManagerInterface $em, ComponentValueGuesser $guesser): Response
     {
         $this->denyAccessUnlessGranted('@tools.value_calculator');
 
@@ -151,7 +153,7 @@ class ToolsController extends AbstractController
         $prefillOhms = null;
         $prefillFarads = null;
         if ($part !== null) {
-            [$prefillOhms, $prefillFarads] = $this->guessPartValue($part);
+            [$prefillOhms, $prefillFarads] = $guesser->extractValue($part);
         }
 
         return $this->render('tools/value_calculator/value_calculator.html.twig', [
@@ -163,66 +165,63 @@ class ToolsController extends AbstractController
         ]);
     }
 
-    /**
-     * Best-effort guess of a part's resistance (ohms) and/or capacitance (farads) from its
-     * parameters, so the value calculator can pre-fill. Returns [ohms|null, farads|null].
-     * Fully defensive: any failure yields [null, null] so the page always renders.
-     *
-     * @return array{0: float|null, 1: float|null}
-     */
-    private function guessPartValue(Part $part): array
+    #[Route(path: '/bulk_generate_images', name: 'tools_bulk_generate')]
+    public function bulkGenerate(Request $request, EntityManagerInterface $em, ComponentValueGuesser $guesser): Response
     {
-        //SI prefix -> factor. m (milli) vs M (mega) are handled case-sensitively below.
-        $prefixes = ['p' => 1e-12, 'n' => 1e-9, 'u' => 1e-6, 'µ' => 1e-6, 'k' => 1e3, 'meg' => 1e6, 'g' => 1e9];
-        $factorFor = static function (string $prefix) use ($prefixes): float {
-            $prefix = trim($prefix);
-            if ($prefix === '' || $prefix === 'M') {
-                return $prefix === 'M' ? 1e6 : 1.0;
+        $this->denyAccessUnlessGranted('@tools.value_calculator');
+
+        $location = null;
+        $candidates = [];
+        $locationId = $request->query->getInt('location');
+        if ($locationId > 0) {
+            $location = $em->find(StorageLocation::class, $locationId);
+            if ($location !== null) {
+                $candidates = $this->findBulkCandidates($em, $guesser, $location);
             }
-            if ($prefix === 'm') {
-                return 1e-3;
-            }
-            return $prefixes[mb_strtolower($prefix)] ?? 1.0;
-        };
-
-        $ohms = null;
-        $farads = null;
-
-        try {
-            foreach ($part->getParameters() as $param) {
-                $name = mb_strtolower($param->getName());
-                $unit = trim($param->getUnit() ?? '');
-
-                $isRes = preg_match('/resist|widerstand|ohm/u', $name) === 1
-                    || str_contains($unit, 'Ω') || stripos($unit, 'ohm') !== false;
-                //Capacitance unit is an optional SI prefix followed by the farad symbol (F, pF, nF, µF, mF …).
-                $isCap = preg_match('/capacit|kapazit|farad/u', $name) === 1
-                    || preg_match('/^(meg|[pnuµmkMg])?F$/u', $unit) === 1;
-
-                if (!$isRes && !$isCap) {
-                    continue;
-                }
-
-                //The number lives in value_typical; its SI prefix is baked into the unit string
-                //(e.g. value_typical=4.7, unit="kΩ" -> 4700 Ω), so multiply the two.
-                $num = $param->getValueTypical();
-                if ($num === null || $num <= 0) {
-                    continue;
-                }
-
-                $prefix = (string) preg_replace('/(Ω|ohms?|F|farads?)$/iu', '', $unit);
-                $value = $num * $factorFor($prefix);
-
-                if ($isRes && $ohms === null) {
-                    $ohms = $value;
-                } elseif ($isCap && $farads === null) {
-                    $farads = $value;
-                }
-            }
-        } catch (\Throwable) {
-            return [null, null];
         }
 
-        return [$ohms, $farads];
+        return $this->render('tools/value_calculator/bulk_generate.html.twig', [
+            'location' => $location,
+            'candidates' => $candidates,
+            'locations' => $em->getRepository(StorageLocation::class)->findBy([], ['name' => 'ASC']),
+        ]);
+    }
+
+    /**
+     * Finds parts stored in the given location that have no picture yet and can be classified as a
+     * resistor / SMD resistor / capacitor, for the bulk image generator's review list.
+     *
+     * @return array<int, array{part: Part, type: string, value: float, package: string|null}>
+     */
+    private function findBulkCandidates(EntityManagerInterface $em, ComponentValueGuesser $guesser, StorageLocation $location): array
+    {
+        /** @var Part[] $parts */
+        $parts = $em->getRepository(Part::class)->createQueryBuilder('part')
+            ->leftJoin('part.partLots', 'lot')
+            ->where('lot.storage_location = :loc')
+            ->andWhere('part.master_picture_attachment IS NULL')
+            ->setParameter('loc', $location)
+            ->distinct()
+            ->getQuery()
+            ->getResult();
+
+        $candidates = [];
+        foreach ($parts as $part) {
+            if (!$this->isGranted('edit', $part)) {
+                continue;
+            }
+            $guess = $guesser->guess($part);
+            if ($guess === null) {
+                continue;
+            }
+            $candidates[] = [
+                'part' => $part,
+                'type' => $guess['type'],
+                'value' => $guess['value'],
+                'package' => $guess['package'],
+            ];
+        }
+
+        return $candidates;
     }
 }

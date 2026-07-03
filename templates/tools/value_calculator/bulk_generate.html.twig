@@ -1,0 +1,57 @@
+{% extends "main_card.html.twig" %}
+
+{% block title %}{% trans %}tools.bulk_gen.title{% endtrans %}{% endblock %}
+
+{% block card_title %}
+    <i class="fas fa-images"></i> {% trans %}tools.bulk_gen.title{% endtrans %}
+{% endblock %}
+
+{% block card_content %}
+    <p class="text-muted">{% trans %}tools.bulk_gen.intro{% endtrans %}</p>
+
+    <form method="get" class="row g-2 mb-4" style="max-width: 44rem;">
+        <div class="col-sm-9">
+            <select name="location" class="form-select" aria-label="{% trans %}tools.bulk_gen.pick_location{% endtrans %}">
+                <option value="">{% trans %}tools.bulk_gen.pick_location{% endtrans %}</option>
+                {% for loc in locations %}
+                    <option value="{{ loc.id }}" {% if location and loc.id == location.id %}selected{% endif %}>{{ loc.full_path('  →  ') }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-sm-3">
+            <button type="submit" class="btn btn-primary w-100">{% trans %}tools.bulk_gen.load{% endtrans %}</button>
+        </div>
+    </form>
+
+    {% if location is not null %}
+        {% if candidates is empty %}
+            <div class="alert alert-info">{% trans with {'%location%': location.name} %}tools.bulk_gen.none{% endtrans %}</div>
+        {% else %}
+            <p>{{ candidates|length }} {% trans %}tools.bulk_gen.found{% endtrans %} <strong>{{ location.name }}</strong>:</p>
+            <table class="table table-sm table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th style="width: 2rem;"></th>
+                        <th>{% trans %}tools.bulk_gen.part{% endtrans %}</th>
+                        <th>{% trans %}tools.bulk_gen.type{% endtrans %}</th>
+                        <th>{% trans %}tools.bulk_gen.value{% endtrans %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in candidates %}
+                        <tr>
+                            <td><input class="form-check-input" type="checkbox" checked></td>
+                            <td><a href="{{ path('part_info', {id: c.part.id}) }}" target="_blank" rel="noopener">{{ c.part.name }}</a></td>
+                            <td><span class="badge bg-secondary">{{ c.type }}</span></td>
+                            <td>
+                                {% if c.type == 'capacitor' %}{{ (c.value * 1e12)|round(2) }} pF{% else %}{{ c.value|round(3) }} Ω{% endif %}
+                                {%- if c.package %} · {{ c.package }}{% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="alert alert-secondary small">{% trans %}tools.bulk_gen.wip{% endtrans %}</div>
+        {% endif %}
+    {% endif %}
+{% endblock %}

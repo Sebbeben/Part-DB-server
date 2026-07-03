@@ -13007,6 +13007,66 @@ Buerklin-API Authentication server:
         <target>Resistor &amp; capacitor calculator</target>
       </segment>
     </unit>
+    <unit id="bulkgen_title" name="tools.bulk_gen.title">
+      <segment state="translated">
+        <source>tools.bulk_gen.title</source>
+        <target>Bulk generate component images</target>
+      </segment>
+    </unit>
+    <unit id="bulkgen_intro" name="tools.bulk_gen.intro">
+      <segment state="translated">
+        <source>tools.bulk_gen.intro</source>
+        <target>Pick a storage location. Parts in it that have no picture yet and look like a resistor, SMD resistor or capacitor are listed below, so you can generate and attach pictures for the whole assortment at once.</target>
+      </segment>
+    </unit>
+    <unit id="bulkgen_pick" name="tools.bulk_gen.pick_location">
+      <segment state="translated">
+        <source>tools.bulk_gen.pick_location</source>
+        <target>— Select a storage location —</target>
+      </segment>
+    </unit>
+    <unit id="bulkgen_load" name="tools.bulk_gen.load">
+      <segment state="translated">
+        <source>tools.bulk_gen.load</source>
+        <target>Load parts</target>
+      </segment>
+    </unit>
+    <unit id="bulkgen_none" name="tools.bulk_gen.none">
+      <segment state="translated">
+        <source>tools.bulk_gen.none</source>
+        <target>No parts without a picture could be classified in "%location%".</target>
+      </segment>
+    </unit>
+    <unit id="bulkgen_found" name="tools.bulk_gen.found">
+      <segment state="translated">
+        <source>tools.bulk_gen.found</source>
+        <target>classifiable part(s) found in</target>
+      </segment>
+    </unit>
+    <unit id="bulkgen_part" name="tools.bulk_gen.part">
+      <segment state="translated">
+        <source>tools.bulk_gen.part</source>
+        <target>Part</target>
+      </segment>
+    </unit>
+    <unit id="bulkgen_type" name="tools.bulk_gen.type">
+      <segment state="translated">
+        <source>tools.bulk_gen.type</source>
+        <target>Detected type</target>
+      </segment>
+    </unit>
+    <unit id="bulkgen_value" name="tools.bulk_gen.value">
+      <segment state="translated">
+        <source>tools.bulk_gen.value</source>
+        <target>Value</target>
+      </segment>
+    </unit>
+    <unit id="bulkgen_wip" name="tools.bulk_gen.wip">
+      <segment state="translated">
+        <source>tools.bulk_gen.wip</source>
+        <target>Review the detected types and values here — generating and attaching the pictures is the next step.</target>
+      </segment>
+    </unit>
     <unit id="vcalc_explanation" name="tools.value_calc.explanation">
       <segment state="translated">
         <source>tools.value_calc.explanation</source>

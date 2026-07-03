@@ -142,6 +142,10 @@ class ToolsTreeBuilder
                 $this->translator->trans('tools.value_calc.title'),
                 $this->urlGenerator->generate('tools_value_calculator')
             ))->setIcon('fa-treeview fa-fw fa-solid fa-palette');
+            $nodes[] = (new TreeViewNode(
+                $this->translator->trans('tools.bulk_gen.title'),
+                $this->urlGenerator->generate('tools_bulk_generate')
+            ))->setIcon('fa-treeview fa-fw fa-solid fa-images');
         }
         if ($this->security->isGranted('@parts.import')) {
             $nodes[] = (new TreeViewNode(
