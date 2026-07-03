@@ -172,6 +172,46 @@ export default class extends Controller {
     }
 
     /**
+     * Public helper used by the bulk generator: renders the picture for the given component and
+     * returns its SVG markup (without any tab interaction). `type` is 'resistor', 'smd_resistor'
+     * or 'capacitor'; `value` is ohms (resistors) or farads (capacitors); `options` may carry
+     * {voltage, package, tolerance}.
+     */
+    generateSvg(type, value, options = {}) {
+        try {
+            if (type === "capacitor") {
+                if (this.hasCapVoltageTarget) {
+                    this.capVoltageTarget.value = options.voltage > 0 ? String(options.voltage) : "";
+                }
+                this.updateCapSpec();
+                this.capPf = value * 1e12;
+                this.setCapFields(this.capPf, null);
+                this.redrawCap();
+                return this.hasCapSvgTarget ? this.capSvgTarget.innerHTML.trim() : "";
+            }
+            if (type === "smd_resistor" || type === "smd") {
+                if (options.package && this.hasSmdPackageTarget) {
+                    this.smdPackageTarget.value = options.package;
+                }
+                this.smdMarking = "code3";
+                this.smdOhms = value;
+                this.setSmdFields(value, null);
+                this.redrawSmd();
+                return this.hasSmdSvgTarget ? this.smdSvgTarget.innerHTML.trim() : "";
+            }
+            // Resistor (through-hole colour bands)
+            if (!this.setBandsFromValue(value, options.tolerance ?? 1) && this.hasResistorValueInputTarget) {
+                this.resistorValueInputTarget.value = this.formatOhms(value);
+            }
+            this.updateResistor();
+            return this.hasResistorSvgTarget ? this.resistorSvgTarget.innerHTML.trim() : "";
+        } catch (e) {
+            console.error("value_calc: generateSvg failed", e);
+            return "";
+        }
+    }
+
+    /**
      * Posts the currently shown SVG of the chosen picture to the server so it gets attached to
      * the part. Uses a background request so the modal can close without navigating away (which
      * would otherwise trigger the browser's "unsaved changes" prompt and lose the edit form).

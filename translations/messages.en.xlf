@@ -13079,6 +13079,30 @@ Buerklin-API Authentication server:
         <target>skipped: already have a picture or not classifiable</target>
       </segment>
     </unit>
+    <unit id="bulkgen_preview" name="tools.bulk_gen.preview">
+      <segment state="translated">
+        <source>tools.bulk_gen.preview</source>
+        <target>Preview</target>
+      </segment>
+    </unit>
+    <unit id="bulkgen_genattach" name="tools.bulk_gen.generate_attach">
+      <segment state="translated">
+        <source>tools.bulk_gen.generate_attach</source>
+        <target>Attach pictures to the checked parts</target>
+      </segment>
+    </unit>
+    <unit id="bulkgen_attached" name="tools.bulk_gen.attached">
+      <segment state="translated">
+        <source>tools.bulk_gen.attached</source>
+        <target>attached</target>
+      </segment>
+    </unit>
+    <unit id="bulkgen_failed" name="tools.bulk_gen.failed">
+      <segment state="translated">
+        <source>tools.bulk_gen.failed</source>
+        <target>failed</target>
+      </segment>
+    </unit>
     <unit id="plaction_group_images" name="part_list.action.group.images">
       <segment state="translated">
         <source>part_list.action.group.images</source>
