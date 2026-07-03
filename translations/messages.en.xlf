@@ -13142,7 +13142,7 @@ Buerklin-API Authentication server:
     <unit id="vcalc_attach_generate_hint" name="tools.value_calc.attach.generate_hint">
       <segment state="translated">
         <source>tools.value_calc.attach.generate_hint</source>
-        <target>Save your other changes first — attaching adds the picture and reloads this page to show it.</target>
+        <target>Generate a resistor, capacitor or SMD picture and attach it to this part.</target>
       </segment>
     </unit>
     <unit id="vcalc_gen_flash_success" name="part.generate_image.flash.success">

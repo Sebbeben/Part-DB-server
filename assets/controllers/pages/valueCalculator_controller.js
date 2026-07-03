@@ -252,11 +252,21 @@ export default class extends Controller {
             }
         }
 
-        // Reload so the new attachment shows and the edit form becomes aware of it. This matters
-        // on the edit page: the attachments collection uses orphanRemoval, so saving a stale form
-        // (that doesn't yet know about the AJAX-added image) would delete it. If there are unsaved
-        // edits the browser will prompt on reload — hence the "save changes first" hint.
-        window.location.reload();
+        // On the edit page, refresh just the attachment list via its Turbo frame: the new image
+        // shows and the form includes it (so orphanRemoval can't delete it on the next save) —
+        // without a full-page reload or the unsaved-changes prompt. Elsewhere (part info page)
+        // just reload so the new picture appears.
+        const frame = document.getElementById("part-attachments-frame");
+        if (frame) {
+            if (frame.getAttribute("src") && typeof frame.reload === "function") {
+                frame.reload();
+            } else {
+                frame.setAttribute("src", window.location.href.split("#")[0]);
+            }
+            AlertSwal.fire({title: message, icon: "success", timer: 2000, showConfirmButton: false});
+        } else {
+            window.location.reload();
+        }
     }
 
     /*
