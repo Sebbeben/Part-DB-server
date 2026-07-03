@@ -23,7 +23,6 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Entity\Parts\Part;
-use App\Entity\Parts\StorageLocation;
 use App\Services\Attachments\AttachmentSubmitHandler;
 use App\Services\Tools\ComponentValueGuesser;
 use App\Services\Attachments\AttachmentURLGenerator;
@@ -165,63 +164,47 @@ class ToolsController extends AbstractController
         ]);
     }
 
+    /**
+     * Landing page for the "Generate component images" bulk action: classifies the selected parts
+     * (skipping ones that already have a picture or can't be classified) and lets the user review,
+     * then generate + attach pictures. Reached from the parts table action bar with ?ids=1,2,3.
+     */
     #[Route(path: '/bulk_generate_images', name: 'tools_bulk_generate')]
     public function bulkGenerate(Request $request, EntityManagerInterface $em, ComponentValueGuesser $guesser): Response
     {
         $this->denyAccessUnlessGranted('@tools.value_calculator');
 
-        $location = null;
         $candidates = [];
-        $locationId = $request->query->getInt('location');
-        if ($locationId > 0) {
-            $location = $em->find(StorageLocation::class, $locationId);
-            if ($location !== null) {
-                $candidates = $this->findBulkCandidates($em, $guesser, $location);
+        $skipped = 0;
+        $ids = array_values(array_filter(
+            array_map('intval', explode(',', (string) $request->query->get('ids', ''))),
+            static fn (int $id): bool => $id > 0
+        ));
+
+        if ($ids !== []) {
+            foreach ($em->getRepository(Part::class)->findBy(['id' => $ids]) as $part) {
+                if (!$this->isGranted('edit', $part)) {
+                    continue;
+                }
+                //Only illustrate parts that have no picture yet, and that we can classify.
+                $guess = $part->getMasterPictureAttachment() === null ? $guesser->guess($part) : null;
+                if ($guess === null) {
+                    $skipped++;
+                    continue;
+                }
+                $candidates[] = [
+                    'part' => $part,
+                    'type' => $guess['type'],
+                    'value' => $guess['value'],
+                    'package' => $guess['package'],
+                ];
             }
         }
 
         return $this->render('tools/value_calculator/bulk_generate.html.twig', [
-            'location' => $location,
             'candidates' => $candidates,
-            'locations' => $em->getRepository(StorageLocation::class)->findBy([], ['name' => 'ASC']),
+            'skipped' => $skipped,
+            'selected_count' => count($ids),
         ]);
-    }
-
-    /**
-     * Finds parts stored in the given location that have no picture yet and can be classified as a
-     * resistor / SMD resistor / capacitor, for the bulk image generator's review list.
-     *
-     * @return array<int, array{part: Part, type: string, value: float, package: string|null}>
-     */
-    private function findBulkCandidates(EntityManagerInterface $em, ComponentValueGuesser $guesser, StorageLocation $location): array
-    {
-        /** @var Part[] $parts */
-        $parts = $em->getRepository(Part::class)->createQueryBuilder('part')
-            ->leftJoin('part.partLots', 'lot')
-            ->where('lot.storage_location = :loc')
-            ->andWhere('part.master_picture_attachment IS NULL')
-            ->setParameter('loc', $location)
-            ->distinct()
-            ->getQuery()
-            ->getResult();
-
-        $candidates = [];
-        foreach ($parts as $part) {
-            if (!$this->isGranted('edit', $part)) {
-                continue;
-            }
-            $guess = $guesser->guess($part);
-            if ($guess === null) {
-                continue;
-            }
-            $candidates[] = [
-                'part' => $part,
-                'type' => $guess['type'],
-                'value' => $guess['value'],
-                'package' => $guess['package'],
-            ];
-        }
-
-        return $candidates;
     }
 }

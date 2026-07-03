@@ -13016,7 +13016,7 @@ Buerklin-API Authentication server:
     <unit id="bulkgen_intro" name="tools.bulk_gen.intro">
       <segment state="translated">
         <source>tools.bulk_gen.intro</source>
-        <target>Pick a storage location. Parts in it that have no picture yet and look like a resistor, SMD resistor or capacitor are listed below, so you can generate and attach pictures for the whole assortment at once.</target>
+        <target>Selected parts that have no picture yet and look like a resistor, SMD resistor or capacitor are listed below. Review the auto-detected type and value, then generate and attach pictures in one go.</target>
       </segment>
     </unit>
     <unit id="bulkgen_pick" name="tools.bulk_gen.pick_location">
@@ -13034,13 +13034,13 @@ Buerklin-API Authentication server:
     <unit id="bulkgen_none" name="tools.bulk_gen.none">
       <segment state="translated">
         <source>tools.bulk_gen.none</source>
-        <target>No parts without a picture could be classified in "%location%".</target>
+        <target>None of the %count% selected part(s) could be classified as a resistor, SMD resistor or capacitor without an existing picture.</target>
       </segment>
     </unit>
     <unit id="bulkgen_found" name="tools.bulk_gen.found">
       <segment state="translated">
         <source>tools.bulk_gen.found</source>
-        <target>classifiable part(s) found in</target>
+        <target>part(s) ready to illustrate.</target>
       </segment>
     </unit>
     <unit id="bulkgen_part" name="tools.bulk_gen.part">
@@ -13065,6 +13065,30 @@ Buerklin-API Authentication server:
       <segment state="translated">
         <source>tools.bulk_gen.wip</source>
         <target>Review the detected types and values here — generating and attaching the pictures is the next step.</target>
+      </segment>
+    </unit>
+    <unit id="bulkgen_nosel" name="tools.bulk_gen.no_selection">
+      <segment state="translated">
+        <source>tools.bulk_gen.no_selection</source>
+        <target>No parts were selected. Select parts in a list and choose the "Generate component images" action.</target>
+      </segment>
+    </unit>
+    <unit id="bulkgen_skipped" name="tools.bulk_gen.skipped">
+      <segment state="translated">
+        <source>tools.bulk_gen.skipped</source>
+        <target>skipped: already have a picture or not classifiable</target>
+      </segment>
+    </unit>
+    <unit id="plaction_group_images" name="part_list.action.group.images">
+      <segment state="translated">
+        <source>part_list.action.group.images</source>
+        <target>Images</target>
+      </segment>
+    </unit>
+    <unit id="plaction_gen_images" name="part_list.action.generate_images">
+      <segment state="translated">
+        <source>part_list.action.generate_images</source>
+        <target>Generate component images</target>
       </segment>
     </unit>
     <unit id="vcalc_explanation" name="tools.value_calc.explanation">
