@@ -63,49 +63,123 @@ class ComponentValueGuesser
     }
 
     /**
-     * Extracts the resistance (ohms) and/or capacitance (farads) from the part's parameters.
-     * The number lives in value_typical; its SI prefix is baked into the unit string.
+     * Extracts the resistance (ohms) and/or capacitance (farads) of a part: first from its
+     * parameters, then (for parts named by their value, e.g. "10nF") from the name/description.
      *
      * @return array{0: float|null, 1: float|null}
      */
     public function extractValue(Part $part): array
     {
-        $ohms = null;
-        $farads = null;
-
         try {
-            foreach ($part->getParameters() as $param) {
-                $name = mb_strtolower($param->getName());
-                $unit = trim($param->getUnit() ?? '');
-
-                $isRes = preg_match('/resist|widerstand|ohm/u', $name) === 1
-                    || str_contains($unit, 'Ω') || stripos($unit, 'ohm') !== false;
-                $isCap = preg_match('/capacit|kapazit|farad/u', $name) === 1
-                    || preg_match('/^(meg|[pnuµmkMg])?F$/u', $unit) === 1;
-
-                if (!$isRes && !$isCap) {
-                    continue;
-                }
-
-                $num = $param->getValueTypical();
-                if ($num === null || $num <= 0) {
-                    continue;
-                }
-
-                $prefix = (string) preg_replace('/(Ω|ohms?|F|farads?)$/iu', '', $unit);
-                $value = $num * $this->prefixFactor($prefix);
-
-                if ($isRes && $ohms === null) {
-                    $ohms = $value;
-                } elseif ($isCap && $farads === null) {
-                    $farads = $value;
-                }
+            [$ohms, $farads] = $this->fromParameters($part);
+            if ($ohms !== null || $farads !== null) {
+                return [$ohms, $farads];
             }
+
+            $text = trim($part->getName().' '.($part->getDescription() ?? ''));
+
+            //A farad unit is unambiguous, so a capacitance found in the name wins.
+            $farads = $this->parseFaradsFromText($text);
+            if ($farads !== null) {
+                return [null, $farads];
+            }
+
+            return [$this->parseOhmsFromText($text), null];
         } catch (\Throwable) {
             return [null, null];
         }
+    }
+
+    /**
+     * Reads the resistance/capacitance from the part's parameters. The number lives in
+     * value_typical; its SI prefix is baked into the unit string (e.g. 4.7 + "kΩ" -> 4700 Ω).
+     *
+     * @return array{0: float|null, 1: float|null}
+     */
+    private function fromParameters(Part $part): array
+    {
+        $ohms = null;
+        $farads = null;
+
+        foreach ($part->getParameters() as $param) {
+            $name = mb_strtolower($param->getName());
+            $unit = trim($param->getUnit() ?? '');
+
+            $isRes = preg_match('/resist|widerstand|ohm/u', $name) === 1
+                || str_contains($unit, 'Ω') || stripos($unit, 'ohm') !== false;
+            $isCap = preg_match('/capacit|kapazit|farad/u', $name) === 1
+                || preg_match('/^(meg|[pnuµmkMg])?F$/u', $unit) === 1;
+
+            if (!$isRes && !$isCap) {
+                continue;
+            }
+
+            $num = $param->getValueTypical();
+            if ($num === null || $num <= 0) {
+                continue;
+            }
+
+            $prefix = (string) preg_replace('/(Ω|ohms?|F|farads?)$/iu', '', $unit);
+            $value = $num * $this->prefixFactor($prefix);
+
+            if ($isRes && $ohms === null) {
+                $ohms = $value;
+            } elseif ($isCap && $farads === null) {
+                $farads = $value;
+            }
+        }
 
         return [$ohms, $farads];
+    }
+
+    /** Parses a capacitance (farads) out of free text like "10nF", "0.1uF" or "4n7", else null. */
+    private function parseFaradsFromText(string $text): ?float
+    {
+        if (preg_match('/(\d+(?:[.,]\d+)?)\s*(p|n|u|µ|m)?F\b/iu', $text, $m) === 1) {
+            return (float) str_replace(',', '.', $m[1]) * $this->prefixFactor(mb_strtolower($m[2] ?? ''));
+        }
+        //RKM notation, e.g. 4n7 = 4.7 nF, 2p2 = 2.2 pF.
+        if (preg_match('/\b(\d+)(p|n|u|µ)(\d+)\b/iu', $text, $m) === 1) {
+            return (float) ($m[1].'.'.$m[3]) * $this->prefixFactor(mb_strtolower($m[2]));
+        }
+
+        return null;
+    }
+
+    /** Parses a resistance (ohms) out of free text like "4k7", "10k", "470R" or "4.7kΩ", else null. */
+    private function parseOhmsFromText(string $text): ?float
+    {
+        //RKM notation, e.g. 4k7 = 4.7 kΩ, 1R5 = 1.5 Ω, 2M2 = 2.2 MΩ.
+        if (preg_match('/\b(\d+)(R|k|K|M|G)(\d+)\b/u', $text, $m) === 1) {
+            $factor = strtoupper($m[2]) === 'R' ? 1.0 : $this->ohmPrefixFactor($m[2]);
+
+            return (float) ($m[1].'.'.$m[3]) * $factor;
+        }
+        //Number followed by a magnitude letter, e.g. 10k, 4.7M, 470R.
+        if (preg_match('/(\d+(?:[.,]\d+)?)\s*(k|K|M|G|R)\b/u', $text, $m) === 1) {
+            if (strtoupper($m[2]) === 'R') {
+                return (float) str_replace(',', '.', $m[1]);
+            }
+
+            return (float) str_replace(',', '.', $m[1]) * $this->ohmPrefixFactor($m[2]);
+        }
+        //Explicit ohm unit, e.g. 470Ω, 1 ohm.
+        if (preg_match('/(\d+(?:[.,]\d+)?)\s*(?:Ω|ohms?)/iu', $text, $m) === 1) {
+            return (float) str_replace(',', '.', $m[1]);
+        }
+
+        return null;
+    }
+
+    /** kilo/mega/giga factor for a resistance magnitude letter ("M" means mega in this context). */
+    private function ohmPrefixFactor(string $p): float
+    {
+        return match (mb_strtolower($p)) {
+            'k' => 1e3,
+            'm' => 1e6,
+            'g' => 1e9,
+            default => 1.0,
+        };
     }
 
     /**
