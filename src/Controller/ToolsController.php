@@ -199,6 +199,8 @@ class ToolsController extends AbstractController
                     'package' => $guess['package'],
                     'voltage' => $guess['voltage'],
                     'tolerance' => $guess['tolerance'],
+                    'pitch' => $guess['pitch'],
+                    'diameter' => $guess['diameter'],
                 ];
             }
         }

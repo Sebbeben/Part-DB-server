@@ -179,7 +179,24 @@ export default class extends Controller {
      */
     generateSvg(type, value, options = {}) {
         try {
+            if (options.bodyColor) {
+                if (this.hasCapBodyColorTarget) {
+                    this.capBodyColorTarget.value = options.bodyColor;
+                }
+                if (this.hasSmdBodyColorTarget) {
+                    this.smdBodyColorTarget.value = options.bodyColor;
+                }
+                if (this.hasResistorBodyColorTarget) {
+                    this.resistorBodyColorTarget.value = options.bodyColor;
+                }
+            }
             if (type === "capacitor") {
+                if (this.hasCapDiameterTarget && options.diameter > 0) {
+                    this.capDiameterTarget.value = String(options.diameter);
+                }
+                if (this.hasCapPitchTarget && options.pitch) {
+                    this.capPitchTarget.value = String(options.pitch);
+                }
                 if (this.hasCapVoltageTarget) {
                     this.capVoltageTarget.value = options.voltage > 0 ? String(options.voltage) : "";
                 }

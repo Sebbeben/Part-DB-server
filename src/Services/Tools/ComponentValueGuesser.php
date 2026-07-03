@@ -56,6 +56,8 @@ class ComponentValueGuesser
                 'package' => $package,
                 'voltage' => null,
                 'tolerance' => $tolerance,
+                'pitch' => null,
+                'diameter' => null,
             ];
         }
 
@@ -66,7 +68,55 @@ class ComponentValueGuesser
                 'package' => null,
                 'voltage' => $this->detectVoltage($part),
                 'tolerance' => $tolerance,
+                'pitch' => $this->detectPitch($part),
+                'diameter' => $this->detectDiameter($part),
             ];
+        }
+
+        return null;
+    }
+
+    /** Lead pitch in mm, from a Pitch/RM parameter or the name ("pitch 2.54mm", "RM5"), else null. */
+    private function detectPitch(Part $part): ?float
+    {
+        try {
+            foreach ($part->getParameters() as $param) {
+                if (preg_match('/pitch|lead spacing|raster|\brm\b|pin distance/u', mb_strtolower($param->getName())) === 1
+                    && $param->getValueTypical() !== null && $param->getValueTypical() > 0) {
+                    return (float) $param->getValueTypical();
+                }
+            }
+        } catch (\Throwable) {
+            //fall through to text parsing
+        }
+
+        $text = $part->getName().' '.($part->getDescription() ?? '');
+        if (preg_match('/(?:pitch|rm|raster)\s*[:=]?\s*(\d+(?:[.,]\d+)?)\s*mm?/iu', $text, $m) === 1
+            || preg_match('/(\d+(?:[.,]\d+)?)\s*mm\s*pitch/iu', $text, $m) === 1) {
+            return (float) str_replace(',', '.', $m[1]);
+        }
+
+        return null;
+    }
+
+    /** Body diameter in mm, from a Diameter/Size parameter or the name ("⌀5mm"), else null. */
+    private function detectDiameter(Part $part): ?float
+    {
+        try {
+            foreach ($part->getParameters() as $param) {
+                if (preg_match('/diameter|durchmesser|body size/u', mb_strtolower($param->getName())) === 1
+                    && $param->getValueTypical() !== null && $param->getValueTypical() > 0) {
+                    return (float) $param->getValueTypical();
+                }
+            }
+        } catch (\Throwable) {
+            //fall through to text parsing
+        }
+
+        $text = $part->getName().' '.($part->getDescription() ?? '');
+        if (preg_match('/[⌀Ø]\s*(\d+(?:[.,]\d+)?)/u', $text, $m) === 1
+            || preg_match('/(?:diameter|durchmesser)\s*[:=]?\s*(\d+(?:[.,]\d+)?)\s*mm?/iu', $text, $m) === 1) {
+            return (float) str_replace(',', '.', $m[1]);
         }
 
         return null;

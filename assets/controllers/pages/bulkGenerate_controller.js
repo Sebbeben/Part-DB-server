@@ -26,7 +26,7 @@ import {trans} from "../../translator.js";
  * checked ones to their parts via the per-part generate-image endpoint (with a progress bar).
  */
 export default class extends Controller {
-    static targets = ["row", "progress", "progressBar", "attachBtn"];
+    static targets = ["row", "progress", "progressBar", "attachBtn", "batchPitch", "batchDiameter", "batchColor"];
 
     connect() {
         this.tryRenderPreviews(0);
@@ -63,12 +63,34 @@ export default class extends Controller {
             voltage: row.dataset.voltage ? parseFloat(row.dataset.voltage) : 0,
             package: row.dataset.package || null,
             tolerance: row.dataset.tolerance ? parseFloat(row.dataset.tolerance) : 1,
+            //Per-part value if the part specifies it, otherwise the batch-wide appearance controls.
+            pitch: row.dataset.pitch || (this.hasBatchPitchTarget ? this.batchPitchTarget.value : null),
+            diameter: row.dataset.diameter
+                ? parseFloat(row.dataset.diameter)
+                : (this.hasBatchDiameterTarget ? parseFloat(this.batchDiameterTarget.value) : 0),
+            bodyColor: this.hasBatchColorTarget ? this.batchColorTarget.value : null,
         });
         row.dataset.svg = svg;
         const cell = row.querySelector("[data-bulk-preview]");
         if (cell) {
             cell.innerHTML = svg || "";
         }
+    }
+
+    /** Re-render every preview after a batch appearance control (pitch/diameter/colour) changes. */
+    regenerate() {
+        const calc = this.calcController();
+        if (calc) {
+            this.rowTargets.forEach((row) => this.renderPreview(row, calc));
+        }
+    }
+
+    /** A body-colour quick-pick button: set the colour input, then regenerate. */
+    pickColor(event) {
+        if (this.hasBatchColorTarget) {
+            this.batchColorTarget.value = event.currentTarget.dataset.color;
+        }
+        this.regenerate();
     }
 
     /** Header checkbox: check/uncheck every row. */

@@ -13085,6 +13085,12 @@ Buerklin-API Authentication server:
         <target>Preview</target>
       </segment>
     </unit>
+    <unit id="bulkgen_appearance" name="tools.bulk_gen.appearance">
+      <segment state="translated">
+        <source>tools.bulk_gen.appearance</source>
+        <target>Picture appearance</target>
+      </segment>
+    </unit>
     <unit id="bulkgen_genattach" name="tools.bulk_gen.generate_attach">
       <segment state="translated">
         <source>tools.bulk_gen.generate_attach</source>
