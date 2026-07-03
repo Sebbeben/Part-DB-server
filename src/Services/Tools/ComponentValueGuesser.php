@@ -38,12 +38,14 @@ class ComponentValueGuesser
     /**
      * Classifies a part.
      *
-     * @return array{type: 'resistor'|'smd_resistor'|'capacitor', value: float, package: string|null}|null
+     * @return array{type: 'resistor'|'smd_resistor'|'capacitor', value: float, package: string|null,
+     *               voltage: int|null, tolerance: string|null}|null
      *              value is ohms (resistors) or farads (capacitors); null if it can't be classified.
      */
     public function guess(Part $part): ?array
     {
         [$ohms, $farads] = $this->extractValue($part);
+        $tolerance = $this->detectTolerance($part);
 
         if ($ohms !== null && $ohms > 0) {
             $package = $this->detectSmdPackage($part);
@@ -52,11 +54,69 @@ class ComponentValueGuesser
                 'type' => $package !== null ? 'smd_resistor' : 'resistor',
                 'value' => $ohms,
                 'package' => $package,
+                'voltage' => null,
+                'tolerance' => $tolerance,
             ];
         }
 
         if ($farads !== null && $farads > 0) {
-            return ['type' => 'capacitor', 'value' => $farads, 'package' => null];
+            return [
+                'type' => 'capacitor',
+                'value' => $farads,
+                'package' => null,
+                'voltage' => $this->detectVoltage($part),
+                'tolerance' => $tolerance,
+            ];
+        }
+
+        return null;
+    }
+
+    /** Rated voltage in volts, from a Voltage parameter or the name/description ("50V"), else null. */
+    private function detectVoltage(Part $part): ?int
+    {
+        try {
+            foreach ($part->getParameters() as $param) {
+                if (preg_match('/voltage|spannung|\bvdc\b/u', mb_strtolower($param->getName())) === 1
+                    && $param->getValueTypical() !== null && $param->getValueTypical() > 0) {
+                    return (int) round($param->getValueTypical());
+                }
+            }
+        } catch (\Throwable) {
+            //fall through to text parsing
+        }
+
+        if (preg_match('/(\d+(?:[.,]\d+)?)\s*V(?:DC|AC)?\b/iu', $part->getName().' '.($part->getDescription() ?? ''), $m) === 1) {
+            return (int) round((float) str_replace(',', '.', $m[1]));
+        }
+
+        return null;
+    }
+
+    /** Tolerance as a display string (e.g. "±10%") from a Tolerance parameter or the name, else null. */
+    private function detectTolerance(Part $part): ?string
+    {
+        try {
+            foreach ($part->getParameters() as $param) {
+                if (preg_match('/toleran/u', mb_strtolower($param->getName())) !== 1) {
+                    continue;
+                }
+                $text = trim($param->getValueText() ?? '');
+                if ($text !== '') {
+                    return $text;
+                }
+                if ($param->getValueTypical() !== null) {
+                    return '±'.rtrim(rtrim(sprintf('%.2f', $param->getValueTypical()), '0'), '.').'%';
+                }
+            }
+        } catch (\Throwable) {
+            //fall through to text parsing
+        }
+
+        $text = $part->getName().' '.($part->getDescription() ?? '');
+        if (preg_match('/±\s*(\d+(?:[.,]\d+)?)\s*%/u', $text, $m) === 1
+            || preg_match('/\b(\d+(?:[.,]\d+)?)\s*%/u', $text, $m) === 1) {
+            return '±'.str_replace(',', '.', $m[1]).'%';
         }
 
         return null;

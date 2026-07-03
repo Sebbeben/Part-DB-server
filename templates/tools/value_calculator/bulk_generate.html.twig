@@ -25,6 +25,8 @@
                     <th>{% trans %}tools.bulk_gen.part{% endtrans %}</th>
                     <th>{% trans %}tools.bulk_gen.type{% endtrans %}</th>
                     <th>{% trans %}tools.bulk_gen.value{% endtrans %}</th>
+                    <th>{% trans %}tools.value_calc.cap.voltage{% endtrans %}</th>
+                    <th>{% trans %}tools.value_calc.field.tolerance{% endtrans %}</th>
                 </tr>
             </thead>
             <tbody>
@@ -37,6 +39,8 @@
                             {% if c.type == 'capacitor' %}{{ (c.value * 1e12)|round(2) }} pF{% else %}{{ c.value|round(3) }} Ω{% endif %}
                             {%- if c.package %} · {{ c.package }}{% endif %}
                         </td>
+                        <td>{{ c.voltage ? c.voltage ~ ' V' : '—' }}</td>
+                        <td>{{ c.tolerance ?: '—' }}</td>
                     </tr>
                 {% endfor %}
             </tbody>
