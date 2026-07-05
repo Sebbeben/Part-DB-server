@@ -13355,6 +13355,12 @@ Buerklin-API Authentication server:
         <target>Resistor color code</target>
       </segment>
     </unit>
+    <unit id="vcalc_l_title" name="tools.value_calc.inductor.title">
+      <segment state="translated">
+        <source>tools.value_calc.inductor.title</source>
+        <target>Inductor</target>
+      </segment>
+    </unit>
     <unit id="vcalc_c_title" name="tools.value_calc.capacitor.title">
       <segment state="translated">
         <source>tools.value_calc.capacitor.title</source>

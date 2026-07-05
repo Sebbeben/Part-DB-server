@@ -62,6 +62,10 @@ class ComponentValueGuesser
             ];
         }
 
+        if ($type === 'inductor') {
+            return ['symbol' => 'Device:L', 'reference' => 'L', 'footprint' => null];
+        }
+
         if ($type === 'smd_resistor' && $package !== null && isset(self::SMD_METRIC[$package])) {
             $footprint = 'Resistor_SMD:R_'.$package.'_'.self::SMD_METRIC[$package].'Metric';
         } else {
@@ -118,14 +122,15 @@ class ComponentValueGuesser
     /**
      * Classifies a part.
      *
-     * @return array{type: 'resistor'|'smd_resistor'|'capacitor', value: float, package: string|null,
+     * @return array{type: 'resistor'|'smd_resistor'|'capacitor'|'inductor', value: float, package: string|null,
      *               voltage: int|null, tolerance: string|null, pitch: float|null, diameter: float|null,
      *               power: float|null, ppm: int|null, color: string|null}|null
-     *              value is ohms (resistors) or farads (capacitors); null if it can't be classified.
+     *              value is ohms (resistors), farads (capacitors) or henries (inductors); null if it
+     *              can't be classified.
      */
     public function guess(Part $part): ?array
     {
-        [$ohms, $farads] = $this->extractValue($part);
+        [$ohms, $farads, $henries] = $this->extractValue($part);
         $tolerance = $this->detectTolerance($part);
         $color = $this->detectBodyColor($part);
 
@@ -155,6 +160,21 @@ class ComponentValueGuesser
                 'tolerance' => $tolerance,
                 'pitch' => $this->detectPitch($part),
                 'diameter' => $this->detectDiameter($part),
+                'power' => null,
+                'ppm' => null,
+                'color' => $color,
+            ];
+        }
+
+        if ($henries !== null && $henries > 0) {
+            return [
+                'type' => 'inductor',
+                'value' => $henries,
+                'package' => null,
+                'voltage' => null,
+                'tolerance' => $tolerance,
+                'pitch' => null,
+                'diameter' => null,
                 'power' => null,
                 'ppm' => null,
                 'color' => $color,
@@ -309,43 +329,48 @@ class ComponentValueGuesser
     }
 
     /**
-     * Extracts the resistance (ohms) and/or capacitance (farads) of a part: first from its
-     * parameters, then (for parts named by their value, e.g. "10nF") from the name/description.
+     * Extracts the resistance (ohms), capacitance (farads) and/or inductance (henries) of a part:
+     * first from its parameters, then (for parts named by their value, e.g. "10nF") from the name.
      *
-     * @return array{0: float|null, 1: float|null}
+     * @return array{0: float|null, 1: float|null, 2: float|null} [ohms, farads, henries]
      */
     public function extractValue(Part $part): array
     {
         try {
-            [$ohms, $farads] = $this->fromParameters($part);
-            if ($ohms !== null || $farads !== null) {
-                return [$ohms, $farads];
+            [$ohms, $farads, $henries] = $this->fromParameters($part);
+            if ($ohms !== null || $farads !== null || $henries !== null) {
+                return [$ohms, $farads, $henries];
             }
 
             $text = trim($part->getName().' '.$part->getDescription());
 
-            //A farad unit is unambiguous, so a capacitance found in the name wins.
+            //Farad and henry units are unambiguous, so a match in the name wins over resistance.
             $farads = $this->parseFaradsFromText($text);
             if ($farads !== null) {
-                return [null, $farads];
+                return [null, $farads, null];
+            }
+            $henries = $this->parseHenriesFromText($text);
+            if ($henries !== null) {
+                return [null, null, $henries];
             }
 
-            return [$this->parseOhmsFromText($text), null];
+            return [$this->parseOhmsFromText($text), null, null];
         } catch (\Throwable) {
-            return [null, null];
+            return [null, null, null];
         }
     }
 
     /**
-     * Reads the resistance/capacitance from the part's parameters. The number lives in
+     * Reads the resistance/capacitance/inductance from the part's parameters. The number lives in
      * value_typical; its SI prefix is baked into the unit string (e.g. 4.7 + "kΩ" -> 4700 Ω).
      *
-     * @return array{0: float|null, 1: float|null}
+     * @return array{0: float|null, 1: float|null, 2: float|null} [ohms, farads, henries]
      */
     private function fromParameters(Part $part): array
     {
         $ohms = null;
         $farads = null;
+        $henries = null;
 
         foreach ($part->getParameters() as $param) {
             $name = mb_strtolower($param->getName());
@@ -355,8 +380,10 @@ class ComponentValueGuesser
                 || str_contains($unit, 'Ω') || stripos($unit, 'ohm') !== false;
             $isCap = preg_match('/capacit|kapazit|farad/u', $name) === 1
                 || preg_match('/^(meg|[pnuµmkMg])?F$/u', $unit) === 1;
+            $isInd = preg_match('/induct|induktivit/u', $name) === 1
+                || preg_match('/^(meg|[pnuµmk])?H$/u', $unit) === 1;
 
-            if (!$isRes && !$isCap) {
+            if (!$isRes && !$isCap && !$isInd) {
                 continue;
             }
 
@@ -365,17 +392,19 @@ class ComponentValueGuesser
                 continue;
             }
 
-            $prefix = (string) preg_replace('/(Ω|ohms?|F|farads?)$/iu', '', $unit);
+            $prefix = (string) preg_replace('/(Ω|ohms?|F|farads?|H|henr(y|ies))$/iu', '', $unit);
             $value = $num * $this->prefixFactor($prefix);
 
             if ($isRes && $ohms === null) {
                 $ohms = $value;
             } elseif ($isCap && $farads === null) {
                 $farads = $value;
+            } elseif ($isInd && $henries === null) {
+                $henries = $value;
             }
         }
 
-        return [$ohms, $farads];
+        return [$ohms, $farads, $henries];
     }
 
     /** Parses a capacitance (farads) out of free text like "10nF", "0.1uF" or "4n7", else null. */
@@ -387,6 +416,17 @@ class ComponentValueGuesser
         //RKM notation, e.g. 4n7 = 4.7 nF, 2p2 = 2.2 pF.
         if (preg_match('/\b(\d+)(p|n|u|µ)(\d+)\b/iu', $text, $m) === 1) {
             return (float) ($m[1].'.'.$m[3]) * $this->prefixFactor(mb_strtolower($m[2]));
+        }
+
+        return null;
+    }
+
+    /** Parses an inductance (henries) out of free text like "100µH", "10mH", "4.7uH" or "1H", else null. */
+    private function parseHenriesFromText(string $text): ?float
+    {
+        //Uppercase H only (so "MHz" and "100h" hours don't match); the (?![a-zA-Z0-9]) avoids "MHz".
+        if (preg_match('/(\d+(?:[.,]\d+)?)\s*(p|n|u|µ|m)?H(?![a-zA-Z0-9])/u', $text, $m) === 1) {
+            return (float) str_replace(',', '.', $m[1]) * $this->prefixFactor(mb_strtolower($m[2] ?? ''));
         }
 
         return null;

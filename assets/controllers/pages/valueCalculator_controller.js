@@ -239,6 +239,20 @@ export default class extends Controller {
                 this.redrawSmd();
                 return this.hasSmdSvgTarget ? this.smdSvgTarget.innerHTML.trim() : "";
             }
+            if (type === "inductor") {
+                //The inductor colour code is the resistor code read as microhenries.
+                if (options.leadLength) {
+                    this.resistorLead = options.leadLength;
+                }
+                const desiredBands = (options.tolerance != null && options.tolerance <= 2) ? 5 : 4;
+                if (this.hasBandSelectsTarget && this.bandCount !== desiredBands) {
+                    this.bandCount = desiredBands;
+                    this.renderBandSelects();
+                }
+                this.setBandsFromValue(value / 1e-6, options.tolerance ?? 10);
+                this.drawInductor(this.selectedColors(), value, options.bodyColor);
+                return this.hasResistorSvgTarget ? this.resistorSvgTarget.innerHTML.trim() : "";
+            }
             // Resistor (through-hole colour bands)
             if (this.hasResistorPowerTarget && options.power) {
                 this.resistorPowerTarget.value = this.resistorPowerKey(options.power);
@@ -701,6 +715,86 @@ export default class extends Controller {
             this.resistorSpecTarget.textContent =
                 `${dim.label} · ${this.formatMm(dim.len)} × ⌀${this.formatMm(dim.dia)} · pitch ${this.formatMm(dim.pitch)} (${dim.pitchIn})`;
         }
+    }
+
+    /**
+     * Draws a molded axial inductor: the same colour-band cylinder as a resistor, but a fatter
+     * green body and a henry value label. The bands are set by the shared resistor band engine
+     * (the inductor colour code is identical, read as microhenries).
+     */
+    drawInductor(colors, henries, bodyColorOverride) {
+        const uid = this.svgId();
+        const margin = 6;
+        const leadExt = RESISTOR_LEAD_LENGTHS[this.resistorLeadValue()] ?? RESISTOR_LEAD_LENGTHS.medium;
+        const bodyW = 168;
+        const bodyH = 78;
+        const bodyX = margin + leadExt;
+        const width = bodyW + 2 * (margin + leadExt);
+        const height = 196;
+        const cy = 62;
+        const bodyY = cy - bodyH / 2;
+        const bodyBottom = bodyY + bodyH;
+
+        const n = colors.length;
+        const bandW = 16;
+        const leftPad = 22;
+        const rightPad = 32;
+        const usable = bodyW - leftPad - rightPad;
+        const step = usable / (n - 1);
+        let bands = "";
+        colors.forEach((name, i) => {
+            const c = RESISTOR_COLORS[name];
+            let x = bodyX + leftPad + i * step;
+            if (i === n - 1) {
+                x = bodyX + bodyW - rightPad + 8;
+            }
+            bands += `<rect x="${x - bandW / 2}" y="${bodyY - 2}" width="${bandW}" height="${bodyH + 4}" fill="${c.hex}"/>`;
+        });
+
+        const colorTarget = bodyColorOverride ? {value: bodyColorOverride} : (this.hasResistorBodyColorTarget ? this.resistorBodyColorTarget : null);
+        const body = this.bodyColor(colorTarget, "#2f6f4c");
+        const callouts =
+            this.dimH(bodyX, bodyX + bodyW, bodyBottom + 16, "L 10.0 mm")
+            + this.dimV(bodyY, bodyBottom, bodyX + bodyW + 28, "⌀ 6.0 mm", bodyX + bodyW)
+            + `<text x="${width / 2}" y="${height - 12}" text-anchor="middle" font-family="monospace" font-size="16" font-weight="700" fill="#3a4149">${this.formatHenries(henries)}</text>`;
+
+        this.resistorSvgTarget.innerHTML = `
+        <svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" style="max-width: 460px; width: 100%; height: auto;">
+            <defs>
+                ${this.leadGradient(uid)}
+                ${this.cylinderGradient(uid)}
+                ${this.endVignetteGradient(uid)}
+                ${this.blurFilter(uid)}
+                <clipPath id="${uid}clip"><rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="30" ry="30"/></clipPath>
+                ${this.shadowFilter(uid)}
+            </defs>
+            <g>
+                <rect x="${margin}" y="${cy - 5}" width="${width - 2 * margin}" height="10" rx="5" fill="url(#${uid}lead)"/>
+                <g clip-path="url(#${uid}clip)">
+                    <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" fill="${body}"/>
+                    ${bands}
+                    <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" fill="url(#${uid}cyl)"/>
+                    <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" fill="url(#${uid}vig)"/>
+                    <ellipse cx="${width / 2}" cy="${bodyY + bodyH * 0.24}" rx="${bodyW * 0.44}" ry="5" fill="#ffffff" opacity="0.4" filter="url(#${uid}blur)"/>
+                </g>
+                <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="30" ry="30" fill="none" stroke="#00000055" stroke-width="1"/>
+            </g>
+            ${callouts}
+        </svg>`;
+    }
+
+    /** Human-readable inductance: nH / µH / mH / H. */
+    formatHenries(h) {
+        if (h >= 1) {
+            return `${this.trimNumber(h)} H`;
+        }
+        if (h >= 1e-3) {
+            return `${this.trimNumber(h / 1e-3)} mH`;
+        }
+        if (h >= 1e-6) {
+            return `${this.trimNumber(h / 1e-6)} µH`;
+        }
+        return `${this.trimNumber(h / 1e-9)} nH`;
     }
 
     resistorPowerValue() {

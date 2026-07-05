@@ -253,4 +253,46 @@ class ComponentValueGuesserTest extends TestCase
         self::assertSame('C', $eda['reference']);
         self::assertStringContainsString('P5.00mm', (string) $eda['footprint']);
     }
+
+    /**
+     * @dataProvider inductorValueProvider
+     */
+    public function testClassifiesInductor(string $name, float $expectedHenries): void
+    {
+        $guess = $this->guesser->guess($this->part($name));
+        self::assertNotNull($guess, "Expected '$name' to classify");
+        self::assertSame('inductor', $guess['type']);
+        self::assertEqualsWithDelta($expectedHenries, $guess['value'], $expectedHenries * 1e-6);
+    }
+
+    public static function inductorValueProvider(): \Generator
+    {
+        yield 'microhenry µ' => ['Inductor 100µH', 100e-6];
+        yield 'microhenry u' => ['Choke 4.7uH', 4.7e-6];
+        yield 'millihenry' => ['Coil 10mH', 10e-3];
+        yield 'nanohenry' => ['100nH inductor', 100e-9];
+        yield 'henry' => ['1H filter choke', 1.0];
+    }
+
+    public function testInductanceFromParameter(): void
+    {
+        $part = $this->partWithParameter('Inductance', 100.0, 'µH');
+        $guess = $this->guesser->guess($part);
+        self::assertNotNull($guess);
+        self::assertSame('inductor', $guess['type']);
+        self::assertEqualsWithDelta(100e-6, $guess['value'], 1e-12);
+    }
+
+    public function testMegahertzIsNotMistakenForInductance(): void
+    {
+        //"100MHz" must not parse as 100 mH — the (?![a-zA-Z0-9]) guard prevents it.
+        self::assertNull($this->guesser->guess($this->part('Crystal oscillator 100MHz')));
+    }
+
+    public function testEdaSuggestionForInductor(): void
+    {
+        $eda = $this->guesser->edaSuggestion(['type' => 'inductor', 'package' => null, 'pitch' => null, 'diameter' => null]);
+        self::assertSame('Device:L', $eda['symbol']);
+        self::assertSame('L', $eda['reference']);
+    }
 }

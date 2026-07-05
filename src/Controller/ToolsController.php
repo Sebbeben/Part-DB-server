@@ -230,6 +230,7 @@ class ToolsController extends AbstractController
         $hasCaps = false;
         $hasThtResistors = false;
         $hasSmdResistors = false;
+        $hasInductors = false;
         foreach ($candidates as $candidate) {
             if ($candidate['type'] === 'capacitor') {
                 $hasCaps = true;
@@ -239,6 +240,8 @@ class ToolsController extends AbstractController
                 $hasThtResistors = true;
             } elseif ($candidate['type'] === 'smd_resistor') {
                 $hasSmdResistors = true;
+            } elseif ($candidate['type'] === 'inductor') {
+                $hasInductors = true;
             }
         }
 
@@ -249,6 +252,7 @@ class ToolsController extends AbstractController
             'has_caps' => $hasCaps,
             'has_tht_resistors' => $hasThtResistors,
             'has_smd_resistors' => $hasSmdResistors,
+            'has_inductors' => $hasInductors,
             'with_picture' => $withPicture,
             'overwrite' => $overwrite,
             'ids_param' => $idsParam,
