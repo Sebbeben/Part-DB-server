@@ -153,13 +153,6 @@
                             <option value="15">15</option>
                         </select>
                     </div>
-                    <div class="input-group input-group-sm" style="width: auto;">
-                        <span class="input-group-text">{% trans %}tools.value_calc.cap.voltage{% endtrans %}</span>
-                        <input type="number" class="form-control" placeholder="—" min="1" style="width: 4.5rem;"
-                               {{ stimulus_target('pages/bulkGenerate', 'batchVoltage') }}
-                               {{ stimulus_action('pages/bulkGenerate', 'applyVoltage', 'input') }}>
-                        <span class="input-group-text">V</span>
-                    </div>
                     {% endif %}
                     {% if has_tht_resistors %}
                     <div class="input-group input-group-sm" style="width: auto;">
@@ -189,7 +182,7 @@
                         </select>
                     </div>
                     {% endif %}
-                    {% if has_smd_resistors %}
+                    {% if has_smd_resistors or has_smd_inductors or has_smd_capacitors %}
                     <div class="input-group input-group-sm" style="width: auto;">
                         <span class="input-group-text">{% trans %}tools.value_calc.smd.package{% endtrans %}</span>
                         <select class="form-select" style="width: 6rem;"
@@ -206,6 +199,13 @@
                         </select>
                     </div>
                     {% endif %}
+                    <div class="input-group input-group-sm" style="width: auto;">
+                        <span class="input-group-text">{% trans %}tools.value_calc.cap.voltage{% endtrans %}</span>
+                        <input type="number" class="form-control" placeholder="—" min="1" style="width: 4.5rem;"
+                               {{ stimulus_target('pages/bulkGenerate', 'batchVoltage') }}
+                               {{ stimulus_action('pages/bulkGenerate', 'applyVoltage', 'input') }}>
+                        <span class="input-group-text">V</span>
+                    </div>
                     <div class="input-group input-group-sm" style="width: auto;">
                         <span class="input-group-text">{% trans %}tools.value_calc.field.tolerance{% endtrans %}</span>
                         <select class="form-select" style="width: 6.5rem;"
@@ -229,7 +229,8 @@
                                {{ stimulus_target('pages/bulkGenerate', 'batchColor') }}
                                {{ stimulus_action('pages/bulkGenerate', 'applyColor', 'input') }}>
                         <div class="btn-group btn-group-sm">
-                            <button type="button" class="btn btn-outline-secondary" data-color="#e0a63a" {{ stimulus_action('pages/bulkGenerate', 'pickColor') }}>{% trans %}tools.value_calc.body.tan{% endtrans %}</button>
+                            <button type="button" class="btn btn-outline-secondary" data-color="#e8d9b5" {{ stimulus_action('pages/bulkGenerate', 'pickColor') }}>{% trans %}tools.value_calc.body.beige{% endtrans %}</button>
+                            <button type="button" class="btn btn-outline-secondary" data-color="#9fc6e0" {{ stimulus_action('pages/bulkGenerate', 'pickColor') }}>{% trans %}tools.value_calc.body.lightblue{% endtrans %}</button>
                             <button type="button" class="btn btn-outline-secondary" data-color="#2f6db0" {{ stimulus_action('pages/bulkGenerate', 'pickColor') }}>{% trans %}tools.value_calc.body.blue{% endtrans %}</button>
                             <button type="button" class="btn btn-outline-secondary" data-color="#b34a2f" {{ stimulus_action('pages/bulkGenerate', 'pickColor') }}>{% trans %}tools.value_calc.body.red{% endtrans %}</button>
                             <button type="button" class="btn btn-outline-secondary" data-color="#7b4fb0" {{ stimulus_action('pages/bulkGenerate', 'pickColor') }}>{% trans %}tools.value_calc.body.purple{% endtrans %}</button>
@@ -268,6 +269,16 @@
                 <option value="Capacitor_THT:C_Disc_D10.0mm_W2.5mm_P5.00mm"></option>
                 <option value="Capacitor_THT:C_Disc_D7.5mm_W5.0mm_P7.50mm"></option>
                 <option value="Capacitor_THT:C_Disc_D10.5mm_W5.0mm_P7.50mm"></option>
+                <option value="Inductor_SMD:L_0805_2012Metric"></option>
+                <option value="Inductor_SMD:L_1210_3225Metric"></option>
+                <option value="Inductor_THT:L_Axial_L5.3mm_D2.2mm_P10.16mm_Horizontal"></option>
+                <option value="Diode_SMD:D_0805_2012Metric"></option>
+                <option value="Diode_SMD:D_SOD-123"></option>
+                <option value="Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal"></option>
+                <option value="Diode_THT:D_DO-41_SOD81_P10.16mm_Horizontal"></option>
+                <option value="LED_SMD:LED_0805_2012Metric"></option>
+                <option value="LED_THT:LED_D5.0mm"></option>
+                <option value="LED_THT:LED_D3.0mm"></option>
             </datalist>
 
             <p class="text-muted small mb-1"><i class="fas fa-info-circle"></i> {% trans %}tools.bulk_gen.kicad_hint{% endtrans %}</p>
@@ -287,9 +298,19 @@
                     </thead>
                     <tbody>
                         {% for c in candidates %}
-                            {% set name_key = c.type == 'capacitor' ? 'tools.value_calc.capacitor.title' : (c.type == 'inductor' ? 'tools.value_calc.inductor.title' : (c.type == 'resistor' ? 'tools.value_calc.resistor.title' : 'tools.value_calc.smd.title')) %}
+                            {% set name_keys = {
+                                'capacitor': 'tools.value_calc.capacitor.title',
+                                'smd_capacitor': 'tools.value_calc.capacitor.title',
+                                'inductor': 'tools.value_calc.inductor.title',
+                                'smd_inductor': 'tools.value_calc.inductor.title',
+                                'resistor': 'tools.value_calc.resistor.title',
+                                'diode': 'tools.value_calc.diode.title',
+                            } %}
+                            {% set name_key = name_keys[c.type]|default('tools.value_calc.smd.title') %}
                             <tr {{ stimulus_target('pages/bulkGenerate', 'row') }}
                                 data-type="{{ c.type }}"
+                                data-subtype="{{ c.subtype }}"
+                                data-marking="{{ c.marking }}"
                                 data-value="{{ c.value }}"
                                 data-voltage="{{ c.voltage }}"
                                 data-tolerance="{{ c.tolerance ? c.tolerance|replace({'±': '', '%': ''})|trim }}"
@@ -312,17 +333,21 @@
                                     <a href="{{ path('part_info', {id: c.part.id}) }}" target="_blank" rel="noopener">{{ c.part.name }}</a>
                                     {%- if c.has_picture %} <span class="badge bg-warning text-dark" title="{{ 'tools.bulk_gen.has_picture_hint'|trans }}">{% trans %}tools.bulk_gen.has_picture{% endtrans %}</span>{% endif %}
                                 </td>
-                                <td><span class="badge bg-secondary">{{ c.type }}</span></td>
+                                <td><span class="badge bg-secondary">{{ c.subtype ?: c.type }}</span></td>
                                 <td>
-                                    {%- if c.type == 'capacitor' -%}
+                                    {%- if c.type in ['capacitor', 'smd_capacitor'] -%}
                                         {%- if c.value >= 1e-6 %}{{ (c.value / 1e-6)|round(3) }} µF
                                         {%- elseif c.value >= 1e-9 %}{{ (c.value / 1e-9)|round(3) }} nF
                                         {%- else %}{{ (c.value * 1e12)|round(1) }} pF{% endif -%}
-                                    {%- elseif c.type == 'inductor' -%}
+                                    {%- elseif c.type in ['inductor', 'smd_inductor'] -%}
                                         {%- if c.value >= 1 %}{{ c.value|round(3) }} H
                                         {%- elseif c.value >= 1e-3 %}{{ (c.value / 1e-3)|round(3) }} mH
                                         {%- elseif c.value >= 1e-6 %}{{ (c.value / 1e-6)|round(3) }} µH
                                         {%- else %}{{ (c.value / 1e-9)|round(1) }} nH{% endif -%}
+                                    {%- elseif c.type == 'diode' -%}
+                                        {%- if c.marking %}{{ c.marking }}
+                                        {%- elseif c.voltage %}{{ c.voltage }} V {{ (c.subtype ?: 'diode')|capitalize }}
+                                        {%- else %}{{ (c.subtype ?: 'diode')|capitalize }}{% endif -%}
                                     {%- else -%}
                                         {%- if c.value >= 1e6 %}{{ (c.value / 1e6)|round(3) }} MΩ
                                         {%- elseif c.value >= 1e3 %}{{ (c.value / 1e3)|round(3) }} kΩ
@@ -331,7 +356,7 @@
                                     {% if c.package %} · {{ c.package }}{% endif %}
                                 </td>
                                 <td style="min-width: 155px;">
-                                    {% set rowcolor = c.color ?: (c.type == 'capacitor' ? '#e0a63a' : (c.type == 'resistor' ? '#e8d9b5' : (c.type == 'inductor' ? '#2f6f4c' : '#20242a'))) %}
+                                    {% set rowcolor = c.color ?: (c.type == 'capacitor' ? '#e0a63a' : (c.type == 'smd_capacitor' ? '#c8a37a' : (c.type == 'resistor' ? '#e8d9b5' : (c.type == 'inductor' ? '#2f6f4c' : (c.type == 'smd_inductor' ? '#38332e' : '#20242a'))))) %}
                                     <div class="d-flex align-items-center gap-1 mb-1">
                                         <input type="color" class="form-control form-control-color form-control-sm" value="{{ rowcolor }}"
                                                data-row-color title="{% trans %}tools.value_calc.body_color{% endtrans %}"
@@ -344,19 +369,14 @@
                                     </div>
                                     {% if c.type == 'capacitor' %}
                                         {% set rp = c.pitch ?: 5.08 %}
-                                        <div class="input-group input-group-sm">
-                                            <select class="form-select" data-row-pitch title="{% trans %}tools.value_calc.cap.pitch{% endtrans %}"
-                                                    {{ stimulus_action('pages/bulkGenerate', 'regenerateRow', 'change') }}>
-                                                <option value="2.54" {{ rp == 2.54 ? 'selected' }}>2.54</option>
-                                                <option value="5.08" {{ rp not in [2.54, 7.5, 10, 15] ? 'selected' }}>5.08</option>
-                                                <option value="7.5" {{ rp == 7.5 ? 'selected' }}>7.5</option>
-                                                <option value="10" {{ rp == 10 ? 'selected' }}>10</option>
-                                                <option value="15" {{ rp == 15 ? 'selected' }}>15</option>
-                                            </select>
-                                            <input type="number" class="form-control" value="{{ c.voltage }}" placeholder="V" min="1" style="max-width: 3.6rem;"
-                                                   data-row-voltage title="{% trans %}tools.value_calc.cap.voltage{% endtrans %}"
-                                                   {{ stimulus_action('pages/bulkGenerate', 'regenerateRow', 'input') }}>
-                                        </div>
+                                        <select class="form-select form-select-sm mb-1" data-row-pitch title="{% trans %}tools.value_calc.cap.pitch{% endtrans %}"
+                                                {{ stimulus_action('pages/bulkGenerate', 'regenerateRow', 'change') }}>
+                                            <option value="2.54" {{ rp == 2.54 ? 'selected' }}>2.54</option>
+                                            <option value="5.08" {{ rp not in [2.54, 7.5, 10, 15] ? 'selected' }}>5.08</option>
+                                            <option value="7.5" {{ rp == 7.5 ? 'selected' }}>7.5</option>
+                                            <option value="10" {{ rp == 10 ? 'selected' }}>10</option>
+                                            <option value="15" {{ rp == 15 ? 'selected' }}>15</option>
+                                        </select>
                                     {% elseif c.type == 'resistor' %}
                                         {% set rpow = c.power ?: 0.25 %}
                                         <div class="input-group input-group-sm">
@@ -379,41 +399,54 @@
                                                 <option value="5" {{ c.ppm == 5 ? 'selected' }}>5</option>
                                             </select>
                                         </div>
-                                    {% elseif c.type == 'smd_resistor' %}
-                                        {% set rpkg = c.package ?: '0805' %}
-                                        <select class="form-select form-select-sm" data-row-package title="{% trans %}tools.value_calc.smd.package{% endtrans %}"
+                                    {% elseif c.type in ['smd_resistor', 'smd_inductor', 'smd_capacitor'] %}
+                                        {% set rpkg = c.package ?: (c.type == 'smd_inductor' ? '1210' : '0805') %}
+                                        <select class="form-select form-select-sm mb-1" data-row-package title="{% trans %}tools.value_calc.smd.package{% endtrans %}"
                                                 {{ stimulus_action('pages/bulkGenerate', 'regenerateRow', 'change') }}>
                                             {% for pkg in ['0201', '0402', '0603', '0805', '1206', '1210', '2010', '2512'] %}
                                                 <option value="{{ pkg }}" {{ rpkg == pkg ? 'selected' }}>{{ pkg }}</option>
                                             {% endfor %}
                                         </select>
                                     {% endif %}
+                                    {# Rated voltage — printed on the generated image. Not shown for LEDs (no voltage marking). #}
+                                    {% if not (c.type == 'diode' and c.subtype == 'led') %}
+                                        <div class="input-group input-group-sm">
+                                            <input type="number" class="form-control" value="{{ c.voltage }}" placeholder="V" min="1"
+                                                   data-row-voltage title="{% trans %}tools.value_calc.cap.voltage{% endtrans %}"
+                                                   {{ stimulus_action('pages/bulkGenerate', 'regenerateRow', 'input') }}>
+                                            <span class="input-group-text">V</span>
+                                        </div>
+                                    {% endif %}
                                 </td>
                                 <td>
-                                    {% set rtol = c.tolerance ? c.tolerance|replace({'±': '', '%': '', ' ': '', 'pF': '', 'PF': ''})|trim : '' %}
-                                    <select class="form-select form-select-sm" data-row-tolerance style="min-width: 7.5rem;"
-                                            {{ stimulus_action('pages/bulkGenerate', 'regenerateRow', 'change') }}>
-                                        <option value="" {{ rtol == '' ? 'selected' }}>—</option>
-                                        {% if c.type == 'capacitor' %}
-                                            <option value="0.1" {{ rtol == '0.1' ? 'selected' }}>±0.1pF (B)</option>
-                                            <option value="0.25" {{ rtol == '0.25' ? 'selected' }}>±0.25pF (C)</option>
-                                            <option value="0.5" {{ rtol == '0.5' ? 'selected' }}>±0.5pF (D)</option>
-                                            <option value="1" {{ rtol == '1' ? 'selected' }}>±1% (F)</option>
-                                            <option value="2" {{ rtol == '2' ? 'selected' }}>±2% (G)</option>
-                                            <option value="5" {{ rtol == '5' ? 'selected' }}>±5% (J)</option>
-                                            <option value="10" {{ rtol == '10' ? 'selected' }}>±10% (K)</option>
-                                            <option value="20" {{ rtol == '20' ? 'selected' }}>±20% (M)</option>
-                                        {% else %}
-                                            <option value="0.05" {{ rtol == '0.05' ? 'selected' }}>±0.05% (W)</option>
-                                            <option value="0.1" {{ rtol == '0.1' ? 'selected' }}>±0.1% (B)</option>
-                                            <option value="0.25" {{ rtol == '0.25' ? 'selected' }}>±0.25% (C)</option>
-                                            <option value="0.5" {{ rtol == '0.5' ? 'selected' }}>±0.5% (D)</option>
-                                            <option value="1" {{ rtol == '1' ? 'selected' }}>±1% (F)</option>
-                                            <option value="2" {{ rtol == '2' ? 'selected' }}>±2% (G)</option>
-                                            <option value="5" {{ rtol == '5' ? 'selected' }}>±5% (J)</option>
-                                            <option value="10" {{ rtol == '10' ? 'selected' }}>±10% (K)</option>
-                                        {% endif %}
-                                    </select>
+                                    {% if c.type in ['diode', 'smd_capacitor'] %}
+                                        <span class="text-muted small">—</span>
+                                    {% else %}
+                                        {% set rtol = c.tolerance ? c.tolerance|replace({'±': '', '%': '', ' ': '', 'pF': '', 'PF': ''})|trim : '' %}
+                                        <select class="form-select form-select-sm" data-row-tolerance style="min-width: 7.5rem;"
+                                                {{ stimulus_action('pages/bulkGenerate', 'regenerateRow', 'change') }}>
+                                            <option value="" {{ rtol == '' ? 'selected' }}>—</option>
+                                            {% if c.type == 'capacitor' %}
+                                                <option value="0.1" {{ rtol == '0.1' ? 'selected' }}>±0.1pF (B)</option>
+                                                <option value="0.25" {{ rtol == '0.25' ? 'selected' }}>±0.25pF (C)</option>
+                                                <option value="0.5" {{ rtol == '0.5' ? 'selected' }}>±0.5pF (D)</option>
+                                                <option value="1" {{ rtol == '1' ? 'selected' }}>±1% (F)</option>
+                                                <option value="2" {{ rtol == '2' ? 'selected' }}>±2% (G)</option>
+                                                <option value="5" {{ rtol == '5' ? 'selected' }}>±5% (J)</option>
+                                                <option value="10" {{ rtol == '10' ? 'selected' }}>±10% (K)</option>
+                                                <option value="20" {{ rtol == '20' ? 'selected' }}>±20% (M)</option>
+                                            {% else %}
+                                                <option value="0.05" {{ rtol == '0.05' ? 'selected' }}>±0.05% (W)</option>
+                                                <option value="0.1" {{ rtol == '0.1' ? 'selected' }}>±0.1% (B)</option>
+                                                <option value="0.25" {{ rtol == '0.25' ? 'selected' }}>±0.25% (C)</option>
+                                                <option value="0.5" {{ rtol == '0.5' ? 'selected' }}>±0.5% (D)</option>
+                                                <option value="1" {{ rtol == '1' ? 'selected' }}>±1% (F)</option>
+                                                <option value="2" {{ rtol == '2' ? 'selected' }}>±2% (G)</option>
+                                                <option value="5" {{ rtol == '5' ? 'selected' }}>±5% (J)</option>
+                                                <option value="10" {{ rtol == '10' ? 'selected' }}>±10% (K)</option>
+                                            {% endif %}
+                                        </select>
+                                    {% endif %}
                                 </td>
                                 <td class="small" style="min-width: 230px;">
                                     <input type="text" class="form-control form-control-sm font-monospace mb-1" value="{{ c.kicad_symbol }}"

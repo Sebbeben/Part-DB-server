@@ -80,6 +80,8 @@ export default class extends Controller {
                 : (row.dataset.tolerance ? parseFloat(row.dataset.tolerance) : null),
             pitch: pitchEl ? pitchEl.value : (row.dataset.pitch || null),
             diameter: diamEl && diamEl.value ? parseFloat(diamEl.value) : (row.dataset.diameter ? parseFloat(row.dataset.diameter) : 0),
+            subtype: row.dataset.subtype || null,
+            marking: row.dataset.marking || null,
             bodyColor: colorEl ? colorEl.value : null,
             shape: this.hasBatchShapeTarget ? this.batchShapeTarget.value : "disc",
             leadLength: this.hasBatchLeadTarget ? this.batchLeadTarget.value : "medium",

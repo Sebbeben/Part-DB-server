@@ -41,11 +41,29 @@ class ComponentValueGuesser
         '1206' => '3216', '1210' => '3225', '2010' => '5025', '2512' => '6332',
     ];
 
+    /** Named THT/SMD diode/LED package -> KiCad footprint. Keyed by the token {@see detectDiodePackage()} returns. */
+    private const DIODE_PACKAGE_FOOTPRINTS = [
+        'DO-41' => 'Diode_THT:D_DO-41_SOD81_P10.16mm_Horizontal',
+        'DO-35' => 'Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal',
+        'DO-15' => 'Diode_THT:D_DO-15_P12.70mm_Horizontal',
+        'DO-201' => 'Diode_THT:D_DO-201AD_P15.24mm_Horizontal',
+        'SOD-123' => 'Diode_SMD:D_SOD-123',
+        'SOD-323' => 'Diode_SMD:D_SOD-323',
+        'SOT-23' => 'Diode_SMD:D_SOT-23',
+        'SMA' => 'Diode_SMD:D_SMA',
+        'SMB' => 'Diode_SMD:D_SMB',
+        'SMC' => 'Diode_SMD:D_SMC',
+        //LED dome sizes (only ever matched when the subtype is 'led', see detectDiodePackage()).
+        '3MM' => 'LED_THT:LED_D3.0mm',
+        '5MM' => 'LED_THT:LED_D5.0mm',
+        '10MM' => 'LED_THT:LED_D10.0mm',
+    ];
+
     /**
      * Suggested KiCad/EDA settings for a classified component. Uses the detected package for SMD
      * parts and the lead pitch / body diameter for through-hole ceramic discs.
      *
-     * @param array{type: string, package: string|null, pitch: float|null, diameter: float|null} $guess
+     * @param array{type: string, package: string|null, pitch: float|null, diameter: float|null, subtype?: string|null} $guess
      *
      * @return array{symbol: string, reference: string, footprint: string|null}
      */
@@ -54,16 +72,48 @@ class ComponentValueGuesser
         $type = $guess['type'];
         $package = $guess['package'] ?? null;
 
-        if ($type === 'capacitor') {
-            return [
-                'symbol' => 'Device:C',
-                'reference' => 'C',
-                'footprint' => $this->capDiscFootprint($guess['pitch'] ?? null, $guess['diameter'] ?? null),
-            ];
+        if ($type === 'capacitor' || $type === 'smd_capacitor') {
+            //SMD (MLCC) capacitors get a chip footprint; through-hole discs are sized by pitch/diameter.
+            if ($type === 'smd_capacitor' && $package !== null && isset(self::SMD_METRIC[$package])) {
+                $footprint = 'Capacitor_SMD:C_'.$package.'_'.self::SMD_METRIC[$package].'Metric';
+            } else {
+                $footprint = $this->capDiscFootprint($guess['pitch'] ?? null, $guess['diameter'] ?? null);
+            }
+
+            return ['symbol' => 'Device:C', 'reference' => 'C', 'footprint' => $footprint];
         }
 
-        if ($type === 'inductor') {
-            return ['symbol' => 'Device:L', 'reference' => 'L', 'footprint' => null];
+        if ($type === 'inductor' || $type === 'smd_inductor') {
+            //SMD inductors get a chip footprint; through-hole ones are left blank (editable afterwards).
+            $footprint = null;
+            if ($type === 'smd_inductor' && $package !== null && isset(self::SMD_METRIC[$package])) {
+                $footprint = 'Inductor_SMD:L_'.$package.'_'.self::SMD_METRIC[$package].'Metric';
+            }
+
+            return ['symbol' => 'Device:L', 'reference' => 'L', 'footprint' => $footprint];
+        }
+
+        if ($type === 'diode') {
+            $subtype = $guess['subtype'] ?? 'diode';
+            $symbol = match ($subtype) {
+                'led' => 'Device:LED',
+                'zener' => 'Device:D_Zener',
+                'schottky' => 'Device:D_Schottky',
+                'tvs' => 'Device:D_TVS',
+                default => 'Device:D',
+            };
+            //A named package (DO-41, SOD-123, a 3mm LED dome, ...) maps to a fixed footprint; an
+            //imperial chip code (0805, ...) is only meaningful for SMD diodes/LEDs sized like a chip.
+            $footprint = null;
+            if ($package !== null) {
+                $footprint = self::DIODE_PACKAGE_FOOTPRINTS[$package] ?? null;
+                if ($footprint === null && isset(self::SMD_METRIC[$package])) {
+                    $prefix = $subtype === 'led' ? 'LED_SMD:LED' : 'Diode_SMD:D';
+                    $footprint = $prefix.'_'.$package.'_'.self::SMD_METRIC[$package].'Metric';
+                }
+            }
+
+            return ['symbol' => $symbol, 'reference' => 'D', 'footprint' => $footprint];
         }
 
         if ($type === 'smd_resistor' && $package !== null && isset(self::SMD_METRIC[$package])) {
@@ -122,14 +172,23 @@ class ComponentValueGuesser
     /**
      * Classifies a part.
      *
-     * @return array{type: 'resistor'|'smd_resistor'|'capacitor'|'inductor', value: float, package: string|null,
-     *               voltage: int|null, tolerance: string|null, pitch: float|null, diameter: float|null,
-     *               power: float|null, ppm: int|null, color: string|null}|null
-     *              value is ohms (resistors), farads (capacitors) or henries (inductors); null if it
-     *              can't be classified.
+     * @return array{type: 'resistor'|'smd_resistor'|'capacitor'|'smd_capacitor'|'inductor'|'smd_inductor'|'diode', value: float,
+     *               package: string|null, voltage: int|null, tolerance: string|null, pitch: float|null,
+     *               diameter: float|null, power: float|null, ppm: int|null, color: string|null,
+     *               subtype: string|null}|null
+     *              value is ohms (resistors), farads (capacitors), henries (inductors) or the rated/forward
+     *              voltage (diodes, 0 if unknown); subtype names the diode kind. Null if it can't be classified.
      */
     public function guess(Part $part): ?array
     {
+        //Unambiguous diode part numbers (1N4148, BAT54, BZX…) are recognised first: their "1N…" style
+        //would otherwise be misread as an RKM value (e.g. "1N4148" -> 1.4148 nF).
+        $text = mb_strtolower($part->getName().' '.$part->getDescription());
+        $pnSubtype = $this->detectDiodePartNumber($text);
+        if ($pnSubtype !== null) {
+            return $this->buildDiodeGuess($part, $pnSubtype);
+        }
+
         [$ohms, $farads, $henries] = $this->extractValue($part);
         $tolerance = $this->detectTolerance($part);
         $color = $this->detectBodyColor($part);
@@ -141,47 +200,226 @@ class ComponentValueGuesser
                 'type' => $package !== null ? 'smd_resistor' : 'resistor',
                 'value' => $ohms,
                 'package' => $package,
-                'voltage' => null,
+                'voltage' => $this->detectVoltage($part),
                 'tolerance' => $tolerance,
                 'pitch' => null,
                 'diameter' => null,
                 'power' => $this->detectPower($part),
                 'ppm' => $this->detectPpm($part),
                 'color' => $color,
+                'subtype' => null,
             ];
         }
 
         if ($farads !== null && $farads > 0) {
+            //A surface-mount cap is drawn as an (unmarked) MLCC chip; a THT one as a ceramic disc.
+            $package = $this->detectSmdPackage($part);
+
             return [
-                'type' => 'capacitor',
+                'type' => $package !== null ? 'smd_capacitor' : 'capacitor',
                 'value' => $farads,
-                'package' => null,
+                'package' => $package,
                 'voltage' => $this->detectVoltage($part),
                 'tolerance' => $tolerance,
-                'pitch' => $this->detectPitch($part),
-                'diameter' => $this->detectDiameter($part),
+                'pitch' => $package !== null ? null : $this->detectPitch($part),
+                'diameter' => $package !== null ? null : $this->detectDiameter($part),
                 'power' => null,
                 'ppm' => null,
                 'color' => $color,
+                'subtype' => null,
             ];
         }
 
         if ($henries !== null && $henries > 0) {
+            //A surface-mount inductor is drawn as a molded chip with a µH code; a THT one as a colour barrel.
+            $package = $this->detectSmdPackage($part);
+
             return [
-                'type' => 'inductor',
+                'type' => $package !== null ? 'smd_inductor' : 'inductor',
                 'value' => $henries,
-                'package' => null,
-                'voltage' => null,
+                'package' => $package,
+                'voltage' => $this->detectVoltage($part),
                 'tolerance' => $tolerance,
                 'pitch' => null,
                 'diameter' => null,
                 'power' => null,
                 'ppm' => null,
                 'color' => $color,
+                'subtype' => null,
             ];
         }
 
+        //Diodes named only by a keyword ("diode", "LED", …) are a fallback after the passive checks,
+        //so "220R resistor for LED" stays a resistor (its resistance is detected first).
+        $kwSubtype = $this->detectDiodeKeyword($text);
+        if ($kwSubtype !== null) {
+            return $this->buildDiodeGuess($part, $kwSubtype);
+        }
+
         return null;
+    }
+
+    /**
+     * Recognises a diode from an unambiguous part-number family (1N4148, 1N400x, BAT54, BZX…, SMBJ…).
+     * These are checked before the passive-value parsing, as their "1N…" style would otherwise be
+     * misread as an RKM capacitance/resistance.
+     *
+     * @return 'led'|'zener'|'schottky'|'tvs'|'diode'|null
+     */
+    private function detectDiodePartNumber(string $text): ?string
+    {
+        //Zener families: BZX/BZV/BZT and 1N47xx / 1N52xx.
+        if (preg_match('/\bbz[xvt]\d/u', $text) === 1
+            || preg_match('/\b1n(4[67]\d{2}|52\d{2})\b/u', $text) === 1) {
+            return 'zener';
+        }
+        //Schottky families: BAT, 1N58xx, MBR.
+        if (preg_match('/\bbat\d/u', $text) === 1
+            || preg_match('/\b1n58\d{2}\b/u', $text) === 1
+            || preg_match('/\bmbr\d/u', $text) === 1) {
+            return 'schottky';
+        }
+        //TVS families: SMAJ/SMBJ, P6KE, 1.5KE.
+        if (preg_match('/\bsm[ab]j\d/u', $text) === 1
+            || preg_match('/\bp6ke\b/u', $text) === 1
+            || preg_match('/\b1\.5ke\b/u', $text) === 1) {
+            return 'tvs';
+        }
+        //General-purpose / rectifier families: 1N4148, 1N400x, 1N914, BAV/BAS.
+        if (preg_match('/\b1n(400\d|4148|914)\b/u', $text) === 1
+            || preg_match('/\bba[vs]\d/u', $text) === 1) {
+            return 'diode';
+        }
+
+        return null;
+    }
+
+    /**
+     * Recognises a diode from a descriptive keyword ("diode", "LED", "Zener", "Schottky", "TVS").
+     * Weaker than a part-number match, so this is only consulted after the passive-value checks.
+     *
+     * @return 'led'|'zener'|'schottky'|'tvs'|'diode'|null
+     */
+    private function detectDiodeKeyword(string $text): ?string
+    {
+        if (preg_match('/\bled\b/u', $text) === 1 || preg_match('/light[- ]emitting/u', $text) === 1) {
+            return 'led';
+        }
+        if (preg_match('/\bzener\b/u', $text) === 1) {
+            return 'zener';
+        }
+        if (preg_match('/\bschottky\b/u', $text) === 1) {
+            return 'schottky';
+        }
+        if (preg_match('/\btvs\b/u', $text) === 1 || preg_match('/transient|transil/u', $text) === 1) {
+            return 'tvs';
+        }
+        if (preg_match('/\bdiode\b/u', $text) === 1 || preg_match('/\brectifier\b/u', $text) === 1) {
+            return 'diode';
+        }
+
+        return null;
+    }
+
+    /**
+     * Recognises a named THT/SMD diode or LED package (DO-41, SOD-123, a 3/5/10 mm LED dome, ...)
+     * from the footprint name / name / description, else falls back to an imperial chip code
+     * (0805, ...) for diodes/LEDs labelled like a resistor chip. The LED dome sizes are only
+     * meaningful (and only checked) when $subtype is 'led'.
+     */
+    private function detectDiodePackage(Part $part, string $subtype): ?string
+    {
+        $haystacks = [];
+        if ($part->getFootprint() !== null) {
+            $haystacks[] = $part->getFootprint()->getName();
+        }
+        $haystacks[] = $part->getName();
+        $haystacks[] = $part->getDescription();
+
+        $patterns = [
+            'DO-41' => '/\bdo[\s-]?41\b/iu',
+            'DO-35' => '/\bdo[\s-]?35\b/iu',
+            'DO-15' => '/\bdo[\s-]?15\b/iu',
+            'DO-201' => '/\bdo[\s-]?201\w*\b/iu',
+            'SOD-123' => '/\bsod[\s-]?123\b/iu',
+            'SOD-323' => '/\bsod[\s-]?323\b/iu',
+            'SOT-23' => '/\bsot[\s-]?23\b/iu',
+            'SMA' => '/\bsma\b/iu',
+            'SMB' => '/\bsmb\b/iu',
+            'SMC' => '/\bsmc\b/iu',
+        ];
+
+        foreach ($haystacks as $text) {
+            if ($text === '') {
+                continue;
+            }
+            foreach ($patterns as $token => $pattern) {
+                if (preg_match($pattern, $text) === 1) {
+                    return $token;
+                }
+            }
+        }
+
+        if ($subtype === 'led') {
+            foreach ($haystacks as $text) {
+                if ($text !== '' && preg_match('/\b(3|5|10)\s?mm\b/iu', $text, $m) === 1) {
+                    return $m[1].'MM';
+                }
+            }
+        }
+
+        return $this->detectSmdPackage($part);
+    }
+
+    /**
+     * Extracts a recognisable diode/rectifier part-number marking (e.g. "1N4001", "BAT54") from the
+     * name/description, for printing on the generated drawing. Not used for LEDs, which aren't
+     * normally marked with their part number.
+     */
+    private function detectDiodeMarking(Part $part): ?string
+    {
+        $text = $part->getName().' '.$part->getDescription();
+        if (preg_match('/\b(1N\d{3,4}[A-Za-z]?|BZX\d{2}[A-Za-z0-9]*|BAT\d{2,3}[A-Za-z]?|BAV\d{2,3}|BAS\d{2,3}|MBR\d+[A-Za-z]?|SMBJ\d+[A-Za-z]?|SMAJ\d+[A-Za-z]?|P6KE\d+[A-Za-z]?)\b/u', $text, $m) === 1) {
+            return mb_strtoupper($m[1]);
+        }
+
+        return null;
+    }
+
+    /**
+     * Builds the classification array for a diode of the given kind, filling in the emission colour
+     * (LEDs) or rated/forward voltage (Zener / TVS) where they can be read from the part.
+     *
+     * @param 'led'|'zener'|'schottky'|'tvs'|'diode' $subtype
+     *
+     * @return array{type: 'diode', value: float, package: string|null, voltage: int|null, tolerance: null,
+     *               pitch: null, diameter: null, power: null, ppm: null, color: string|null, subtype: string,
+     *               marking: string|null}
+     */
+    private function buildDiodeGuess(Part $part, string $subtype): array
+    {
+        $color = $this->detectBodyColor($part);
+        if ($subtype === 'led') {
+            //The "colour" of an LED is its emission colour; default to a typical red.
+            $color ??= '#c0392b';
+        }
+        $voltage = ($subtype === 'zener' || $subtype === 'tvs') ? $this->detectVoltage($part) : null;
+
+        return [
+            'type' => 'diode',
+            'value' => (float) ($voltage ?? 0),
+            'package' => $this->detectDiodePackage($part, $subtype),
+            'voltage' => $voltage,
+            'tolerance' => null,
+            'pitch' => null,
+            'diameter' => null,
+            'power' => null,
+            'ppm' => null,
+            'color' => $color,
+            'subtype' => $subtype,
+            //LEDs aren't normally marked with their part number, unlike axial diodes/rectifiers.
+            'marking' => $subtype !== 'led' ? $this->detectDiodeMarking($part) : null,
+        ];
     }
 
     /** Temperature coefficient in ppm/K (e.g. "50ppm", "±25 ppm/°C") from the name/description, else null. */

@@ -156,6 +156,19 @@ class ComponentValueGuesserTest extends TestCase
         self::assertSame(50, $guess['voltage']);
     }
 
+    public function testClassifiesSmdCapacitorFromPackage(): void
+    {
+        $guess = $this->guesser->guess($this->part('MLCC capacitor 100nF 0805 X7R'));
+        self::assertNotNull($guess);
+        self::assertSame('smd_capacitor', $guess['type']);
+        self::assertSame('0805', $guess['package']);
+        self::assertEqualsWithDelta(100e-9, $guess['value'], 1e-15);
+
+        $eda = $this->guesser->edaSuggestion($guess);
+        self::assertSame('Device:C', $eda['symbol']);
+        self::assertSame('Capacitor_SMD:C_0805_2012Metric', $eda['footprint']);
+    }
+
     public function testUnclassifiableReturnsNull(): void
     {
         self::assertNull($this->guesser->guess($this->part('Arduino Uno R3 development board')));
@@ -294,5 +307,156 @@ class ComponentValueGuesserTest extends TestCase
         $eda = $this->guesser->edaSuggestion(['type' => 'inductor', 'package' => null, 'pitch' => null, 'diameter' => null]);
         self::assertSame('Device:L', $eda['symbol']);
         self::assertSame('L', $eda['reference']);
+        self::assertNull($eda['footprint']);
+    }
+
+    public function testClassifiesSmdInductorFromPackage(): void
+    {
+        $guess = $this->guesser->guess($this->part('Inductor 10µH 0805 SMD'));
+        self::assertNotNull($guess);
+        self::assertSame('smd_inductor', $guess['type']);
+        self::assertSame('0805', $guess['package']);
+        self::assertEqualsWithDelta(10e-6, $guess['value'], 1e-12);
+    }
+
+    public function testEdaSuggestionForSmdInductor(): void
+    {
+        $eda = $this->guesser->edaSuggestion(['type' => 'smd_inductor', 'package' => '1210', 'pitch' => null, 'diameter' => null]);
+        self::assertSame('Device:L', $eda['symbol']);
+        self::assertSame('L', $eda['reference']);
+        self::assertSame('Inductor_SMD:L_1210_3225Metric', $eda['footprint']);
+    }
+
+    /**
+     * @dataProvider diodeProvider
+     */
+    public function testClassifiesDiode(string $name, string $expectedSubtype): void
+    {
+        $guess = $this->guesser->guess($this->part($name));
+        self::assertNotNull($guess, "Expected '$name' to classify");
+        self::assertSame('diode', $guess['type']);
+        self::assertSame($expectedSubtype, $guess['subtype']);
+    }
+
+    public static function diodeProvider(): \Generator
+    {
+        yield 'led word' => ['LED red 5mm 20mA', 'led'];
+        yield 'light emitting' => ['Light-emitting diode green', 'led'];
+        yield 'zener word' => ['Zener diode 5.1V', 'zener'];
+        yield 'zener BZX family' => ['BZX55C5V1', 'zener'];
+        yield 'zener 1N47xx' => ['1N4733A', 'zener'];
+        yield 'schottky word' => ['Schottky barrier diode', 'schottky'];
+        yield 'schottky BAT family' => ['BAT54', 'schottky'];
+        yield 'schottky 1N58xx' => ['1N5819', 'schottky'];
+        yield 'tvs word' => ['TVS diode array', 'tvs'];
+        yield 'tvs SMBJ family' => ['SMBJ15A', 'tvs'];
+        yield 'generic rectifier' => ['Rectifier diode', 'diode'];
+        yield '1N4148 small signal' => ['1N4148 switching', 'diode'];
+        yield '1N4007 rectifier' => ['1N4007', 'diode'];
+        yield 'BAV family' => ['BAV99 dual', 'diode'];
+    }
+
+    public function testLedUsesEmissionColor(): void
+    {
+        $guess = $this->guesser->guess($this->part('LED blue 5mm'));
+        self::assertNotNull($guess);
+        self::assertSame('diode', $guess['type']);
+        self::assertSame('led', $guess['subtype']);
+        self::assertSame('#2f6db0', $guess['color']);
+    }
+
+    public function testZenerCarriesVoltage(): void
+    {
+        $guess = $this->guesser->guess($this->part('Zener diode 5.1V 0.5W'));
+        self::assertNotNull($guess);
+        self::assertSame('zener', $guess['subtype']);
+        self::assertSame(5, $guess['voltage']);
+    }
+
+    public function testResistorForLedStaysResistor(): void
+    {
+        //"220R" yields a resistance, which is classified before the diode fallback ever runs.
+        $guess = $this->guesser->guess($this->part('220R resistor for LED indicator'));
+        self::assertNotNull($guess);
+        self::assertSame('resistor', $guess['type']);
+    }
+
+    /**
+     * @dataProvider diodeEdaProvider
+     */
+    public function testEdaSuggestionForDiode(string $subtype, string $expectedSymbol): void
+    {
+        $eda = $this->guesser->edaSuggestion(['type' => 'diode', 'subtype' => $subtype, 'package' => null, 'pitch' => null, 'diameter' => null]);
+        self::assertSame($expectedSymbol, $eda['symbol']);
+        self::assertSame('D', $eda['reference']);
+        self::assertNull($eda['footprint']);
+    }
+
+    public static function diodeEdaProvider(): \Generator
+    {
+        yield 'generic' => ['diode', 'Device:D'];
+        yield 'led' => ['led', 'Device:LED'];
+        yield 'zener' => ['zener', 'Device:D_Zener'];
+        yield 'schottky' => ['schottky', 'Device:D_Schottky'];
+        yield 'tvs' => ['tvs', 'Device:D_TVS'];
+    }
+
+    public function testEdaSuggestionForSmdDiodeFootprint(): void
+    {
+        $eda = $this->guesser->edaSuggestion(['type' => 'diode', 'subtype' => 'diode', 'package' => '0805', 'pitch' => null, 'diameter' => null]);
+        self::assertSame('Diode_SMD:D_0805_2012Metric', $eda['footprint']);
+    }
+
+    public function testEdaSuggestionForSmdLedFootprint(): void
+    {
+        $eda = $this->guesser->edaSuggestion(['type' => 'diode', 'subtype' => 'led', 'package' => '0805', 'pitch' => null, 'diameter' => null]);
+        self::assertSame('LED_SMD:LED_0805_2012Metric', $eda['footprint']);
+    }
+
+    public function testDetectsThtDiodePackageAndMarking(): void
+    {
+        //Real-world case: importing a 1N400x rectifier kit, whose names spell out the THT package.
+        $guess = $this->guesser->guess($this->part('1N4001 Rectifier Diode 1A 50V DO-41'));
+        self::assertNotNull($guess);
+        self::assertSame('diode', $guess['type']);
+        self::assertSame('diode', $guess['subtype']);
+        self::assertSame('DO-41', $guess['package']);
+        self::assertSame('1N4001', $guess['marking']);
+
+        $eda = $this->guesser->edaSuggestion($guess);
+        self::assertSame('Diode_THT:D_DO-41_SOD81_P10.16mm_Horizontal', $eda['footprint']);
+    }
+
+    public function testDetectsSotSchottkyPackage(): void
+    {
+        $guess = $this->guesser->guess($this->part('BAT54 Schottky diode SOT-23'));
+        self::assertNotNull($guess);
+        self::assertSame('schottky', $guess['subtype']);
+        self::assertSame('SOT-23', $guess['package']);
+        self::assertSame('BAT54', $guess['marking']);
+
+        $eda = $this->guesser->edaSuggestion($guess);
+        self::assertSame('Diode_SMD:D_SOT-23', $eda['footprint']);
+    }
+
+    public function testDetectsLedDomeSizeFootprint(): void
+    {
+        $guess = $this->guesser->guess($this->part('LED red 5mm diffused'));
+        self::assertNotNull($guess);
+        self::assertSame('led', $guess['subtype']);
+        self::assertSame('5MM', $guess['package']);
+        //LEDs aren't normally printed with a part number.
+        self::assertNull($guess['marking']);
+
+        $eda = $this->guesser->edaSuggestion($guess);
+        self::assertSame('LED_THT:LED_D5.0mm', $eda['footprint']);
+    }
+
+    public function testMarkingNullWhenNoRecognisablePartNumber(): void
+    {
+        $guess = $this->guesser->guess($this->part('Generic rectifier diode'));
+        self::assertNotNull($guess);
+        self::assertSame('diode', $guess['subtype']);
+        self::assertNull($guess['marking']);
     }
 }

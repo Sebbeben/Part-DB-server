@@ -210,6 +210,8 @@ class ToolsController extends AbstractController
                 $candidates[] = [
                     'part' => $part,
                     'type' => $guess['type'],
+                    'subtype' => $guess['subtype'] ?? null,
+                    'marking' => $guess['marking'] ?? null,
                     'value' => $guess['value'],
                     'package' => $guess['package'],
                     'voltage' => $guess['voltage'],
@@ -231,6 +233,9 @@ class ToolsController extends AbstractController
         $hasThtResistors = false;
         $hasSmdResistors = false;
         $hasInductors = false;
+        $hasSmdInductors = false;
+        $hasSmdCapacitors = false;
+        $hasDiodes = false;
         foreach ($candidates as $candidate) {
             if ($candidate['type'] === 'capacitor') {
                 $hasCaps = true;
@@ -242,6 +247,12 @@ class ToolsController extends AbstractController
                 $hasSmdResistors = true;
             } elseif ($candidate['type'] === 'inductor') {
                 $hasInductors = true;
+            } elseif ($candidate['type'] === 'smd_inductor') {
+                $hasSmdInductors = true;
+            } elseif ($candidate['type'] === 'smd_capacitor') {
+                $hasSmdCapacitors = true;
+            } elseif ($candidate['type'] === 'diode') {
+                $hasDiodes = true;
             }
         }
 
@@ -253,6 +264,9 @@ class ToolsController extends AbstractController
             'has_tht_resistors' => $hasThtResistors,
             'has_smd_resistors' => $hasSmdResistors,
             'has_inductors' => $hasInductors,
+            'has_smd_inductors' => $hasSmdInductors,
+            'has_smd_capacitors' => $hasSmdCapacitors,
+            'has_diodes' => $hasDiodes,
             'with_picture' => $withPicture,
             'overwrite' => $overwrite,
             'ids_param' => $idsParam,

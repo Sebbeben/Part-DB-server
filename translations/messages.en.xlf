@@ -13280,7 +13280,7 @@ Buerklin-API Authentication server:
     <unit id="vcalc_explanation" name="tools.value_calc.explanation">
       <segment state="translated">
         <source>tools.value_calc.explanation</source>
-        <target>Decode and visualize resistor color bands, capacitor codes and SMD resistor markings. Pick the band colors to read a resistor, or enter a value to generate the matching color code.</target>
+        <target>Decode and visualize the value of common components — colour bands (resistors, inductors), capacitor codes and SMD chip markings. Read a part by picking its bands/code, or enter a value to generate the matching bands/code and a picture you can attach to the part.</target>
       </segment>
     </unit>
     <unit id="vcalc_bodycolor" name="tools.value_calc.body_color">
@@ -13352,7 +13352,7 @@ Buerklin-API Authentication server:
     <unit id="vcalc_r_title" name="tools.value_calc.resistor.title">
       <segment state="translated">
         <source>tools.value_calc.resistor.title</source>
-        <target>Resistor color code</target>
+        <target>Resistor</target>
       </segment>
     </unit>
     <unit id="vcalc_l_title" name="tools.value_calc.inductor.title">
@@ -13361,16 +13361,76 @@ Buerklin-API Authentication server:
         <target>Inductor</target>
       </segment>
     </unit>
+    <unit id="vcalc_l_result" name="tools.value_calc.inductor.result">
+      <segment state="translated">
+        <source>tools.value_calc.inductor.result</source>
+        <target>Inductance</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_l_intro" name="tools.value_calc.inductor.intro">
+      <segment state="translated">
+        <source>tools.value_calc.inductor.intro</source>
+        <target>Molded axial inductors use the same colour-band code as resistors, but the value is read in microhenries (µH). Pick the band colours, or type a value to set them.</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_l_from_value" name="tools.value_calc.inductor.from_value">
+      <segment state="translated">
+        <source>tools.value_calc.inductor.from_value</source>
+        <target>Set from value</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_l_from_value_help" name="tools.value_calc.inductor.from_value_help">
+      <segment state="translated">
+        <source>tools.value_calc.inductor.from_value_help</source>
+        <target>Enter an inductance to colour the bands automatically. A bare number is read as µH (e.g. 100 = 100µH); you can also write 100µH, 10mH or 470nH.</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_d_title" name="tools.value_calc.diode.title">
+      <segment state="translated">
+        <source>tools.value_calc.diode.title</source>
+        <target>Diode</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_smdind_title" name="tools.value_calc.smd_inductor.title">
+      <segment state="translated">
+        <source>tools.value_calc.smd_inductor.title</source>
+        <target>SMD inductor</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_smdind_intro" name="tools.value_calc.smd_inductor.intro">
+      <segment state="translated">
+        <source>tools.value_calc.smd_inductor.intro</source>
+        <target>Molded/shielded SMD power inductor — enter the inductance (e.g. 100µH, 10mH) to see its printed µH code.</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_smdcap_title" name="tools.value_calc.smd_capacitor.title">
+      <segment state="translated">
+        <source>tools.value_calc.smd_capacitor.title</source>
+        <target>SMD capacitor</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_smdcap_intro" name="tools.value_calc.smd_capacitor.intro">
+      <segment state="translated">
+        <source>tools.value_calc.smd_capacitor.intro</source>
+        <target>Surface-mount MLCC capacitors are almost always unmarked, so there's nothing to decode — just enter the value and package to generate a picture you can attach to the part.</target>
+      </segment>
+    </unit>
+    <unit id="vcalc_body_brown" name="tools.value_calc.body.brown">
+      <segment state="translated">
+        <source>tools.value_calc.body.brown</source>
+        <target>Brown</target>
+      </segment>
+    </unit>
     <unit id="vcalc_c_title" name="tools.value_calc.capacitor.title">
       <segment state="translated">
         <source>tools.value_calc.capacitor.title</source>
-        <target>Capacitor code</target>
+        <target>Capacitor</target>
       </segment>
     </unit>
     <unit id="vcalc_s_title" name="tools.value_calc.smd.title">
       <segment state="translated">
         <source>tools.value_calc.smd.title</source>
-        <target>SMD resistor code</target>
+        <target>SMD resistor</target>
       </segment>
     </unit>
     <unit id="vcalc_r_bands" name="tools.value_calc.resistor.bands">

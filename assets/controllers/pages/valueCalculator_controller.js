@@ -112,6 +112,9 @@ export default class extends Controller {
         "capPitch", "capDiameter", "capVoltage", "capSpec", "capShape", "capLead",
         "smdValueInput", "smdCode3", "smdCode4", "smdEia96",
         "smdSvg", "smdResult", "smdBodyColor", "smdPackage", "smdSpec",
+        "smdIndValueInput", "smdIndCode", "smdIndPackage", "smdIndBodyColor", "smdIndSvg", "smdIndSpec",
+        "smdCapValueInput", "smdCapPackage", "smdCapBodyColor", "smdCapVoltage", "smdCapTolerance", "smdCapSvg", "smdCapSpec",
+        "indBandSelects", "indValueInput", "indSvg", "indResult", "indBodyColor",
         "previewInput",
     ];
 
@@ -158,6 +161,28 @@ export default class extends Controller {
         } catch (e) {
             console.error("value_calc: capacitor init failed", e);
             if (this.hasCapResultTarget) this.capResultTarget.textContent = "error: " + e.message;
+        }
+        try {
+            //THT inductor colour-band tab: 4 bands read as µH, demo value 100 µH.
+            this.indBandCount = 4;
+            if (this.hasIndBandSelectsTarget) {
+                this.renderBandSelects(this.indBandSelectsTarget, this.indBandCount, "updateInductor");
+                this.setBandsFromValue(100, 10, this.indBandSelectsTarget, this.indBandCount);
+                this.updateInductor();
+            }
+        } catch (e) {
+            console.error("value_calc: THT inductor init failed", e);
+        }
+        try {
+            //The SMD inductor tab starts on an illustrative value so it isn't empty on first open.
+            this.syncSmdInductor();
+        } catch (e) {
+            console.error("value_calc: SMD inductor init failed", e);
+        }
+        try {
+            this.syncSmdCap();
+        } catch (e) {
+            console.error("value_calc: SMD capacitor init failed", e);
         }
 
         // Jump to the tab matching the part's detected type.
@@ -235,6 +260,8 @@ export default class extends Controller {
                 const wants4 = options.tolerance != null && options.tolerance <= 1;
                 this.smdMarking = wants4 && this.ohmsTo4Digit(value) ? "code4" : "code3";
                 this.smdOhms = value;
+                this.smdTolerance = options.tolerance;
+                this.smdVoltage = options.voltage;
                 this.setSmdFields(value, null);
                 this.redrawSmd();
                 return this.hasSmdSvgTarget ? this.smdSvgTarget.innerHTML.trim() : "";
@@ -250,10 +277,30 @@ export default class extends Controller {
                     this.renderBandSelects();
                 }
                 this.setBandsFromValue(value / 1e-6, options.tolerance ?? 10);
-                this.drawInductor(this.selectedColors(), value, options.bodyColor);
+                this.drawInductor(this.selectedColors(), value, options.bodyColor, null, null, {tolerance: options.tolerance, voltage: options.voltage});
+                return this.hasResistorSvgTarget ? this.resistorSvgTarget.innerHTML.trim() : "";
+            }
+            if (type === "smd_inductor") {
+                //Molded/shielded SMD power inductor: the printed marking is the 3-digit EIA code in µH.
+                const marking = this.henriesToInductorCode(value / 1e-6);
+                const t = this.hasSmdIndSvgTarget ? this.smdIndSvgTarget : this.smdSvgTarget;
+                this.drawSmdInductor(t, marking, value, options);
+                return t ? t.innerHTML.trim() : "";
+            }
+            if (type === "smd_capacitor") {
+                //MLCC chip: unmarked, value shown as a caption. `value` is farads.
+                this.smdCapPf = value * 1e12;
+                const t = this.hasSmdCapSvgTarget ? this.smdCapSvgTarget : this.capSvgTarget;
+                this.drawSmdCapacitor(t, {package: options.package || "0805", bodyColor: options.bodyColor, voltage: options.voltage, tolerance: options.tolerance});
+                return t ? t.innerHTML.trim() : "";
+            }
+            if (type === "diode") {
+                //Bulk-only type (no interactive tab): draws into the shared scratch target, like the inductor.
+                this.drawDiode(this.resistorSvgTarget, options.subtype || "diode", value, options);
                 return this.hasResistorSvgTarget ? this.resistorSvgTarget.innerHTML.trim() : "";
             }
             // Resistor (through-hole colour bands)
+            this.resistorVoltage = options.voltage; //shown on the picture when the part lists a rated voltage
             if (this.hasResistorPowerTarget && options.power) {
                 this.resistorPowerTarget.value = this.resistorPowerKey(options.power);
             }
@@ -296,6 +343,12 @@ export default class extends Controller {
         if (this.hasResistorSvgTarget) {
             this.resistorSvgTarget.innerHTML = "";
         }
+        if (this.hasSmdIndSvgTarget) {
+            this.smdIndSvgTarget.innerHTML = "";
+        }
+        if (this.hasSmdCapSvgTarget) {
+            this.smdCapSvgTarget.innerHTML = "";
+        }
     }
 
     /**
@@ -312,6 +365,9 @@ export default class extends Controller {
             "vc-resistor": this.hasResistorSvgTarget ? this.resistorSvgTarget : null,
             "vc-capacitor": this.hasCapSvgTarget ? this.capSvgTarget : null,
             "vc-smd": this.hasSmdSvgTarget ? this.smdSvgTarget : null,
+            "vc-inductor": this.hasIndSvgTarget ? this.indSvgTarget : null,
+            "vc-smdind": this.hasSmdIndSvgTarget ? this.smdIndSvgTarget : null,
+            "vc-smdcap": this.hasSmdCapSvgTarget ? this.smdCapSvgTarget : null,
         };
         const container = containers[active.id];
         const svg = container ? container.innerHTML.trim() : "";
@@ -403,9 +459,12 @@ export default class extends Controller {
      */
 
     changeBandCount(event) {
-        this.bandCount = parseInt(event.target.value, 10);
-        // Preserve the currently shown value when switching band count
+        // Read the currently shown value BEFORE changing bandCount: computeResistance() reads
+        // this.bandCount against the still-old (not yet re-rendered) selects, so it must run while
+        // both are still in sync — otherwise the role count no longer matches the select count and
+        // the value is silently lost (bands reset to their defaults instead of being preserved).
         const current = this.computeResistance();
+        this.bandCount = parseInt(event.target.value, 10);
         this.renderBandSelects();
         if (current && current.ohms > 0) {
             this.setBandsFromValue(current.ohms, current.tolerance);
@@ -413,12 +472,12 @@ export default class extends Controller {
         this.updateResistor();
     }
 
-    /** Returns the list of band "roles" for the current band count. */
-    bandRoles() {
-        if (this.bandCount === 4) {
+    /** Returns the list of band "roles" for the given band count (defaults to the resistor tab's). */
+    bandRoles(count = this.bandCount) {
+        if (count === 4) {
             return ["digit", "digit", "multiplier", "tolerance"];
         }
-        if (this.bandCount === 6) {
+        if (count === 6) {
             return ["digit", "digit", "digit", "multiplier", "tolerance", "temp"];
         }
         return ["digit", "digit", "digit", "multiplier", "tolerance"];
@@ -438,42 +497,77 @@ export default class extends Controller {
         }[role];
     }
 
-    renderBandSelects() {
-        const roles = this.bandRoles();
+    renderBandSelects(target = this.bandSelectsTarget, count = this.bandCount, action = "updateResistor") {
+        const roles = this.bandRoles(count);
         let html = "";
+        //Each band gets an ordinal prefix ("1st", "2nd", …) so the three identical "Digit" bands are
+        //no longer ambiguous — the number matches reading the physical part left-to-right.
         roles.forEach((role, index) => {
             const options = this.colorsForRole(role)
                 .map((name) => `<option value="${name}">${this.colorLabel(name)}</option>`)
                 .join("");
             const col = roles.length >= 6 ? "col" : "col-sm";
+            const label = `${this.ordinal(index + 1)} ${trans("tools.value_calc.band")} · ${trans(this.labelForRole(role))}`;
             html += `
                 <div class="${col} mb-2">
-                    <label class="form-label small text-muted mb-1" data-role-label="${role}"></label>
+                    <label class="form-label small text-muted mb-1">${label}</label>
                     <select class="form-select" data-band-index="${index}"
-                            data-action="${this.identifier}#updateResistor">${options}</select>
+                            data-action="${this.identifier}#${action}">${options}</select>
                 </div>`;
         });
-        this.bandSelectsTarget.innerHTML = html;
+        target.innerHTML = html;
+    }
 
-        // Fill in the (translated) role labels via the data-role-label hook.
-        this.bandSelectsTarget.querySelectorAll("[data-role-label]").forEach((el) => {
-            el.textContent = trans(this.labelForRole(el.dataset.roleLabel));
-        });
+    /** English ordinal for a small band index (1 -> "1st", 2 -> "2nd", 3 -> "3rd", 4 -> "4th", …). */
+    ordinal(n) {
+        if (n === 1) {
+            return "1st";
+        }
+        if (n === 2) {
+            return "2nd";
+        }
+        if (n === 3) {
+            return "3rd";
+        }
+        return `${n}th`;
+    }
+
+    /**
+     * Builds the " · 50 V · ±10%" spec suffix appended to the value printed on a generated picture,
+     * so the image also carries the rated voltage (caps) and tolerance when they are known. Parts
+     * that don't apply are simply omitted.
+     */
+    specSuffix(opts = {}) {
+        let s = "";
+        const v = opts.voltage !== undefined && opts.voltage !== null ? parseFloat(opts.voltage) : NaN;
+        if (Number.isFinite(v) && v > 0) {
+            s += ` · ${this.trimNumber(v)} V`;
+        }
+        const t = opts.tolerance !== undefined && opts.tolerance !== null && opts.tolerance !== "" ? parseFloat(opts.tolerance) : NaN;
+        if (Number.isFinite(t) && t > 0) {
+            s += ` · ±${this.trimNumber(t)}%`;
+        }
+        return s;
     }
 
     colorLabel(name) {
         return trans("tools.value_calc.color." + name);
     }
 
-    /** Reads the currently selected color of every band select. */
-    selectedColors() {
-        return Array.from(this.bandSelectsTarget.querySelectorAll("select"))
-            .map((sel) => sel.value);
+    /** Reads the currently selected color of every band select in the given target. */
+    selectedColorsFrom(target) {
+        return Array.from(target.querySelectorAll("select")).map((sel) => sel.value);
     }
 
-    computeResistance() {
-        const roles = this.bandRoles();
-        const colors = this.selectedColors();
+    /** Reads the currently selected color of every resistor band select. */
+    selectedColors() {
+        return this.selectedColorsFrom(this.bandSelectsTarget);
+    }
+
+    /** Reads a band-coded value (digits × multiplier), tolerance % and temp ppm from a selects target. */
+    computeBandValue(target, count) {
+        const roles = this.bandRoles(count);
+        const colors = this.selectedColorsFrom(target);
         if (colors.length !== roles.length) {
             return null;
         }
@@ -496,11 +590,12 @@ export default class extends Controller {
             }
         });
 
-        return {
-            ohms: parseInt(digits, 10) * multiplier,
-            tolerance,
-            temp,
-        };
+        return {value: parseInt(digits, 10) * multiplier, tolerance, temp};
+    }
+
+    computeResistance() {
+        const r = this.computeBandValue(this.bandSelectsTarget, this.bandCount);
+        return r === null ? null : {ohms: r.value, tolerance: r.tolerance, temp: r.temp};
     }
 
     updateResistor() {
@@ -516,7 +611,9 @@ export default class extends Controller {
         if (res.temp !== null) {
             text += ` · ${res.temp} ppm/K`;
         }
-        this.resistorResultTarget.textContent = text;
+        if (this.hasResistorResultTarget) {
+            this.resistorResultTarget.textContent = text;
+        }
         this.drawResistor(this.selectedColors());
     }
 
@@ -524,15 +621,15 @@ export default class extends Controller {
      * Determine the band colors representing the given resistance and write
      * them into the selects.
      */
-    setBandsFromValue(ohms, tolerance) {
-        if (!(ohms > 0)) {
+    setBandsFromValue(value, tolerance, target = this.bandSelectsTarget, count = this.bandCount) {
+        if (!(value > 0)) {
             return false;
         }
-        const numDigits = this.bandCount === 4 ? 2 : 3;
+        const numDigits = count === 4 ? 2 : 3;
 
-        // Normalize ohms into <numDigits> significant figures + power of ten
-        let exp = Math.floor(Math.log10(ohms)) - (numDigits - 1);
-        let digits = Math.round(ohms / Math.pow(10, exp));
+        // Normalize the value into <numDigits> significant figures + power of ten
+        let exp = Math.floor(Math.log10(value)) - (numDigits - 1);
+        let digits = Math.round(value / Math.pow(10, exp));
         if (digits >= Math.pow(10, numDigits)) {
             digits = Math.round(digits / 10);
             exp += 1;
@@ -550,8 +647,8 @@ export default class extends Controller {
         }
 
         const digitStr = digits.toString().padStart(numDigits, "0");
-        const roles = this.bandRoles();
-        const selects = this.bandSelectsTarget.querySelectorAll("select");
+        const roles = this.bandRoles(count);
+        const selects = target.querySelectorAll("select");
         let digitIdx = 0;
         roles.forEach((role, i) => {
             if (role === "digit") {
@@ -646,6 +743,80 @@ export default class extends Controller {
         this.updateResistor();
     }
 
+    /*
+     * ---------------------------------------------------------------
+     *  THT inductor colour code (interactive) — same bands as a resistor, read as µH.
+     * ---------------------------------------------------------------
+     */
+
+    changeIndBandCount(event) {
+        //Same ordering requirement as changeBandCount(): read the value while the (still-old) DOM
+        //and the (still-old) band count agree, before switching the count and re-rendering.
+        const current = this.computeBandValue(this.indBandSelectsTarget, this.indBandCount);
+        this.indBandCount = parseInt(event.target.value, 10);
+        this.renderBandSelects(this.indBandSelectsTarget, this.indBandCount, "updateInductor");
+        if (current && current.value > 0) {
+            this.setBandsFromValue(current.value, current.tolerance, this.indBandSelectsTarget, this.indBandCount);
+        }
+        this.updateInductor();
+    }
+
+    /** Reads the inductor band colours, computes the µH value and redraws the barrel. */
+    updateInductor() {
+        if (!this.hasIndSvgTarget) {
+            return;
+        }
+        const r = this.computeBandValue(this.indBandSelectsTarget, this.indBandCount);
+        if (!r) {
+            return;
+        }
+        const henries = r.value * 1e-6; //the band value is read in microhenries
+        let text = this.formatHenries(henries);
+        if (r.tolerance !== null) {
+            text += ` ±${r.tolerance}%`;
+        }
+        if (this.hasIndResultTarget) {
+            this.indResultTarget.textContent = text;
+        }
+        const color = this.hasIndBodyColorTarget ? this.indBodyColorTarget.value : null;
+        this.drawInductor(this.selectedColorsFrom(this.indBandSelectsTarget), henries, color, this.indSvgTarget, "medium", {tolerance: r.tolerance});
+    }
+
+    /** Sets the inductor bands from a typed inductance (bare number = µH; accepts nH/µH/mH/H). */
+    applyInductorValue() {
+        const raw = (this.hasIndValueInputTarget ? this.indValueInputTarget.value : "").trim();
+        const m = raw.match(/^([\d.]+)\s*(p|n|u|µ|m)?\s*h?$/i);
+        if (!m) {
+            if (this.hasIndValueInputTarget) {
+                this.indValueInputTarget.classList.add("is-invalid");
+            }
+            return;
+        }
+        const num = parseFloat(m[1]);
+        const factors = {p: 1e-12, n: 1e-9, u: 1e-6, "µ": 1e-6, m: 1e-3};
+        const henries = m[2] ? num * factors[m[2].toLowerCase()] : num * 1e-6; //bare number = µH
+        const uH = henries / 1e-6;
+        const current = this.computeBandValue(this.indBandSelectsTarget, this.indBandCount);
+        const tol = current && current.tolerance !== null ? current.tolerance : 10;
+        if (!(uH > 0) || !this.setBandsFromValue(uH, tol, this.indBandSelectsTarget, this.indBandCount)) {
+            if (this.hasIndValueInputTarget) {
+                this.indValueInputTarget.classList.add("is-invalid");
+            }
+            return;
+        }
+        if (this.hasIndValueInputTarget) {
+            this.indValueInputTarget.classList.remove("is-invalid");
+        }
+        this.updateInductor();
+    }
+
+    applyIndBodyColor(event) {
+        if (this.hasIndBodyColorTarget) {
+            this.indBodyColorTarget.value = event.currentTarget.dataset.color;
+        }
+        this.updateInductor();
+    }
+
     /** Draws a 3D-shaded axial resistor SVG with bands and dimension callouts. */
     drawResistor(colors) {
         const uid = this.svgId();
@@ -655,7 +826,7 @@ export default class extends Controller {
         const bodyH = 66;
         const bodyX = margin + leadExt;
         const width = bodyW + 2 * (margin + leadExt);
-        const height = 185;
+        const height = 205;
         const cy = 60;
         const bodyY = cy - bodyH / 2;
         const bodyBottom = bodyY + bodyH;
@@ -681,10 +852,15 @@ export default class extends Controller {
 
         const body = this.bodyColor(this.hasResistorBodyColorTarget ? this.resistorBodyColorTarget : null, "#d8c7a0");
         const dim = RESISTOR_POWERS[this.resistorPowerValue()];
+        //The bands are the "real" value encoding, but printing the decoded value too (like every
+        //other drawing in this tool) makes the picture self-explanatory on its own.
+        const res = this.computeResistance();
+        const resistanceLabel = res ? this.formatOhms(res.ohms) + this.specSuffix({voltage: this.resistorVoltage, tolerance: res.tolerance}) : "";
         const callouts =
             this.dimH(bodyX, bodyX + bodyW, bodyBottom + 16, `L ${this.formatMm(dim.len)}`)
-            + this.dimH(margin + 4, width - margin - 4, height - 14, `pitch ${this.formatMm(dim.pitch)} (${dim.pitchIn})`)
-            + this.dimV(bodyY, bodyBottom, bodyX + bodyW + 28, `⌀ ${this.formatMm(dim.dia)}`, bodyX + bodyW);
+            + this.dimH(margin + 4, width - margin - 4, height - 34, `pitch ${this.formatMm(dim.pitch)} (${dim.pitchIn})`)
+            + this.dimV(bodyY, bodyBottom, bodyX + bodyW + 28, `⌀ ${this.formatMm(dim.dia)}`, bodyX + bodyW)
+            + (resistanceLabel ? `<text x="${width / 2}" y="${height - 10}" text-anchor="middle" font-family="monospace" font-size="16" font-weight="700" fill="#3a4149">${resistanceLabel}</text>` : "");
 
         const svg = `
         <svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" style="max-width: 460px; width: 100%; height: auto;">
@@ -722,10 +898,11 @@ export default class extends Controller {
      * green body and a henry value label. The bands are set by the shared resistor band engine
      * (the inductor colour code is identical, read as microhenries).
      */
-    drawInductor(colors, henries, bodyColorOverride) {
+    drawInductor(colors, henries, bodyColorOverride, target = null, leadKey = null, spec = {}) {
+        const tgt = target || this.resistorSvgTarget;
         const uid = this.svgId();
         const margin = 6;
-        const leadExt = RESISTOR_LEAD_LENGTHS[this.resistorLeadValue()] ?? RESISTOR_LEAD_LENGTHS.medium;
+        const leadExt = RESISTOR_LEAD_LENGTHS[leadKey || this.resistorLeadValue()] ?? RESISTOR_LEAD_LENGTHS.medium;
         const bodyW = 168;
         const bodyH = 78;
         const bodyX = margin + leadExt;
@@ -756,9 +933,9 @@ export default class extends Controller {
         const callouts =
             this.dimH(bodyX, bodyX + bodyW, bodyBottom + 16, "L 10.0 mm")
             + this.dimV(bodyY, bodyBottom, bodyX + bodyW + 28, "⌀ 6.0 mm", bodyX + bodyW)
-            + `<text x="${width / 2}" y="${height - 12}" text-anchor="middle" font-family="monospace" font-size="16" font-weight="700" fill="#3a4149">${this.formatHenries(henries)}</text>`;
+            + `<text x="${width / 2}" y="${height - 12}" text-anchor="middle" font-family="monospace" font-size="16" font-weight="700" fill="#3a4149">${this.formatHenries(henries)}${this.specSuffix(spec)}</text>`;
 
-        this.resistorSvgTarget.innerHTML = `
+        tgt.innerHTML = `
         <svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" style="max-width: 460px; width: 100%; height: auto;">
             <defs>
                 ${this.leadGradient(uid)}
@@ -795,6 +972,233 @@ export default class extends Controller {
             return `${this.trimNumber(h / 1e-6)} µH`;
         }
         return `${this.trimNumber(h / 1e-9)} nH`;
+    }
+
+    /**
+     * The marking printed on an SMD inductor, read in microhenries: R-notation below 10 µH
+     * (4.7 -> 4R7, 0.47 -> R47) and the 3-digit EIA code from 10 µH upwards (100 -> 101, 22 -> 220).
+     */
+    henriesToInductorCode(uH) {
+        if (!(uH > 0)) {
+            return "";
+        }
+        if (uH < 10) {
+            let s = parseFloat(uH.toFixed(2)).toString();
+            if (!s.includes(".")) {
+                s += ".0";
+            }
+            return s.startsWith("0.") ? "R" + s.slice(2) : s.replace(".", "R");
+        }
+        let exp = Math.floor(Math.log10(uH)) - 1;
+        let significant = Math.round(uH / Math.pow(10, exp));
+        if (significant >= 100) {
+            significant = Math.round(significant / 10);
+            exp += 1;
+        }
+        if (exp < 0) {
+            exp = 0;
+        }
+        return significant.toString().padStart(2, "0") + exp.toString();
+    }
+
+    /**
+     * Draws a molded / shielded SMD power inductor: a dark rounded ferrite block with a soft domed
+     * highlight, metal end terminations and the printed µH marking. Sized from the chip package.
+     */
+    drawSmdInductor(target, marking, henries, options = {}) {
+        const uid = this.svgId();
+        const w = 300;
+        const h = 200;
+        const pkgKey = SMD_PACKAGES[options.package] ? options.package : "1210";
+        const pkg = SMD_PACKAGES[pkgKey];
+
+        //Power inductors are chunky and near-square; size the block from the package footprint.
+        const bodyW = Math.round(120 + 95 * (pkg.l - 0.6) / (6.3 - 0.6));
+        const bodyH = Math.max(70, Math.min(140, Math.round(bodyW * 0.82)));
+        const cx = w / 2;
+        const bodyX = Math.round(cx - bodyW / 2);
+        const bodyY = Math.round(86 - bodyH / 2);
+        const bodyBottom = bodyY + bodyH;
+        const cy = bodyY + bodyH / 2;
+        const termW = Math.max(12, Math.round(bodyW * 0.12));
+        const rx = Math.max(10, Math.round(bodyW * 0.11));
+
+        const fill = options.bodyColor || "#38332e";
+        const textColor = this.contrastColor(fill);
+        const fontSize = Math.max(15, Math.min(38, Math.round(bodyH * 0.42), Math.round(bodyW * 1.5 / Math.max(3, marking.length))));
+
+        const callouts =
+            this.dimH(bodyX, bodyX + bodyW, bodyBottom + 20, `L ${this.formatMm(pkg.l)}`)
+            + this.dimV(bodyY, bodyBottom, bodyX + bodyW + 18, `W ${this.formatMm(pkg.w)}`, bodyX + bodyW)
+            + `<text x="${cx}" y="${h - 8}" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" fill="#3a4149">${this.formatHenries(henries)}${this.specSuffix(options)}</text>`;
+
+        target.innerHTML = `
+        <svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" style="max-width: 300px; width: 100%; height: auto;">
+            <defs>
+                ${this.metalGradient(uid)}
+                ${this.glossGradient(uid)}
+                ${this.specularGradient(uid)}
+                ${this.blurFilter(uid)}
+                <clipPath id="${uid}clip"><rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="${rx}" ry="${rx}"/></clipPath>
+                ${this.shadowFilter(uid)}
+            </defs>
+            <g>
+                <rect x="${bodyX - 3}" y="${bodyY + bodyH * 0.24}" width="${termW + 6}" height="${bodyH * 0.52}" rx="4" fill="url(#${uid}metal)" stroke="#00000044" stroke-width="1"/>
+                <rect x="${bodyX + bodyW - termW - 3}" y="${bodyY + bodyH * 0.24}" width="${termW + 6}" height="${bodyH * 0.52}" rx="4" fill="url(#${uid}metal)" stroke="#00000044" stroke-width="1"/>
+                <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="${rx}" ry="${rx}" fill="${fill}" stroke="#00000066" stroke-width="1" filter="url(#${uid}shadow)"/>
+                <g clip-path="url(#${uid}clip)">
+                    <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" fill="url(#${uid}gloss)"/>
+                    <ellipse cx="${cx}" cy="${bodyY + bodyH * 0.30}" rx="${bodyW * 0.42}" ry="${bodyH * 0.30}" fill="url(#${uid}spec)" opacity="0.5"/>
+                    <ellipse cx="${cx}" cy="${bodyY + bodyH * 0.18}" rx="${bodyW * 0.30}" ry="4" fill="#ffffff" opacity="0.35" filter="url(#${uid}blur)"/>
+                </g>
+                <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central"
+                      font-family="monospace" font-weight="bold" font-size="${fontSize}" fill="${textColor}" style="paint-order:stroke" stroke="${fill}" stroke-width="0.6">${marking}</text>
+            </g>
+            ${callouts}
+        </svg>`;
+
+        if (options.specEl) {
+            options.specEl.textContent =
+                `${pkgKey} (${pkg.metric}) · ${this.formatMm(pkg.l)} × ${this.formatMm(pkg.w)} · ${this.formatHenries(henries)}`;
+        }
+    }
+
+    /**
+     * Draws a diode. LEDs become a coloured 5 mm dome (long lead = anode, short lead + flat =
+     * cathode); every other kind (rectifier / Zener / Schottky / TVS) becomes an axial body with a
+     * cathode band. The kind only changes colour/caption — diode markings aren't standardised.
+     */
+    drawDiode(target, subtype, voltage, options = {}) {
+        if (subtype === "led") {
+            this.drawLed(target, options.bodyColor || options.color || "#c0392b");
+            return;
+        }
+        this.drawAxialDiode(target, subtype, voltage, options);
+    }
+
+    /**
+     * Axial diode: a dark glass/epoxy body with a light cathode band near one end and two leads.
+     * A recognised part marking (e.g. "1N4001") is printed lengthwise on the body itself, like a
+     * real diode — otherwise a small caption below the leads shows the voltage or the diode kind.
+     */
+    drawAxialDiode(target, subtype, voltage, options = {}) {
+        const uid = this.svgId();
+        const margin = 6;
+        const leadExt = 74;
+        const bodyW = 150;
+        const bodyH = 64;
+        const bodyX = margin + leadExt;
+        const width = bodyW + 2 * (margin + leadExt);
+        const cy = 58;
+        const bodyY = cy - bodyH / 2;
+        const bodyBottom = bodyY + bodyH;
+
+        const body = options.bodyColor || "#20242a";
+        //Cathode band (the stripe marking the "line" side of the diode symbol), near the right end.
+        const bandW = 15;
+        const bandX = bodyX + bodyW - 34;
+
+        const marking = options.marking || null;
+        const hasVoltage = voltage && voltage > 0;
+        const labels = {diode: "Diode", zener: "Zener", schottky: "Schottky", tvs: "TVS"};
+        //Below the body we show: the voltage (if known — e.g. Zener/TVS), else — when there's no
+        //part-number marking on the body — the diode kind. So voltage is shown whenever we have it.
+        const caption = hasVoltage ? `${this.trimNumber(voltage)} V` : (marking ? "" : (labels[subtype] || "Diode"));
+
+        //Compact canvas only when the body carries a marking AND there's no caption to fit below.
+        const height = (marking && caption === "") ? bodyBottom + bodyY : bodyBottom + 30;
+        const textColor = this.contrastColor(body);
+        const markingFontSize = marking
+            ? Math.max(11, Math.min(18, Math.round((bodyW - 8) * 1.7 / Math.max(4, marking.length))))
+            : 0;
+        const bodyMarking = marking
+            ? `<text x="${bodyX + bodyW / 2}" y="${cy}" text-anchor="middle" dominant-baseline="central"
+                   font-family="monospace" font-weight="700" font-size="${markingFontSize}" fill="${textColor}"
+                   style="paint-order:stroke" stroke="${body}" stroke-width="0.5">${marking}</text>`
+            : "";
+        const belowCaption = caption === ""
+            ? ""
+            : `<text x="${width / 2}" y="${height - 10}" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" fill="#3a4149">${caption}</text>`;
+
+        target.innerHTML = `
+        <svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" style="max-width: 460px; width: 100%; height: auto;">
+            <defs>
+                ${this.leadGradient(uid)}
+                ${this.cylinderGradient(uid)}
+                ${this.endVignetteGradient(uid)}
+                ${this.blurFilter(uid)}
+                <clipPath id="${uid}clip"><rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="16" ry="16"/></clipPath>
+                ${this.shadowFilter(uid)}
+            </defs>
+            <g>
+                <rect x="${margin}" y="${cy - 5}" width="${width - 2 * margin}" height="10" rx="5" fill="url(#${uid}lead)"/>
+                <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="16" ry="16" fill="${body}" stroke="#00000066" stroke-width="1" filter="url(#${uid}shadow)"/>
+                <g clip-path="url(#${uid}clip)">
+                    <rect x="${bandX}" y="${bodyY}" width="${bandW}" height="${bodyH}" fill="#e6e9ee"/>
+                    <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" fill="url(#${uid}cyl)"/>
+                    <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" fill="url(#${uid}vig)"/>
+                    <ellipse cx="${bodyX + bodyW * 0.42}" cy="${bodyY + bodyH * 0.26}" rx="${bodyW * 0.34}" ry="4" fill="#ffffff" opacity="0.4" filter="url(#${uid}blur)"/>
+                    ${bodyMarking}
+                </g>
+                <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="16" ry="16" fill="none" stroke="#00000055" stroke-width="1"/>
+            </g>
+            ${belowCaption}
+        </svg>`;
+    }
+
+    /** 5 mm through-hole LED: a coloured epoxy dome with a reflector cup, specular highlight and legs. */
+    drawLed(target, color) {
+        const uid = this.svgId();
+        const width = 200;
+        const height = 232;
+        const cx = 100;
+        const domeR = 50;
+        const domeTopY = 26;
+        const sidesTopY = domeTopY + domeR;
+        const rimY = 150;
+        const left = cx - domeR;
+        const right = cx + domeR;
+        const flangeTop = rimY;
+        const flangeH = 16;
+        const flangeBottom = rimY + flangeH;
+        const flangeL = 44;
+        const flangeR = 156;
+
+        const anodeX = cx - 18;
+        const cathodeX = cx + 18;
+        const leadTop = flangeBottom - 2;
+        const anodeBottom = height - 30;
+        const cathodeBottom = height - 50;
+
+        //Rounded-top body: straight sides up to a hemisphere.
+        const bodyPath = `M ${left} ${rimY} L ${left} ${sidesTopY} A ${domeR} ${domeR} 0 0 1 ${right} ${sidesTopY} L ${right} ${rimY} Z`;
+        //Flange: rounded on the anode (left) side, flat on the cathode (right) side.
+        const flangePath = `M ${flangeL + 6} ${flangeTop} L ${flangeR} ${flangeTop} L ${flangeR} ${flangeBottom} L ${flangeL + 6} ${flangeBottom} Q ${flangeL} ${flangeBottom} ${flangeL} ${flangeBottom - 6} L ${flangeL} ${flangeTop + 6} Q ${flangeL} ${flangeTop} ${flangeL + 6} ${flangeTop} Z`;
+
+        target.innerHTML = `
+        <svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" style="max-width: 260px; width: 100%; height: auto;">
+            <defs>
+                ${this.leadGradient(uid)}
+                <radialGradient id="${uid}led" cx="0.4" cy="0.3" r="0.8">
+                    <stop offset="0" stop-color="#ffffff" stop-opacity="0.85"/>
+                    <stop offset="0.4" stop-color="${color}" stop-opacity="0.92"/>
+                    <stop offset="1" stop-color="${color}"/>
+                </radialGradient>
+                ${this.blurFilter(uid)}
+                ${this.shadowFilter(uid)}
+            </defs>
+            <g>
+                <rect x="${anodeX - 4}" y="${leadTop}" width="8" height="${anodeBottom - leadTop}" rx="3" fill="url(#${uid}lead)"/>
+                <rect x="${cathodeX - 4}" y="${leadTop}" width="8" height="${cathodeBottom - leadTop}" rx="3" fill="url(#${uid}lead)"/>
+                <path d="${flangePath}" fill="${color}" stroke="#00000055" stroke-width="1" filter="url(#${uid}shadow)"/>
+                <path d="${flangePath}" fill="#000000" opacity="0.20"/>
+                <path d="${bodyPath}" fill="url(#${uid}led)" stroke="#00000040" stroke-width="1"/>
+                <path d="M ${cx - 16} ${rimY - 8} L ${cx + 16} ${rimY - 8} L ${cx + 9} ${rimY - 32} L ${cx - 9} ${rimY - 32} Z" fill="#000000" opacity="0.28"/>
+                <rect x="${cx - 4}" y="${rimY - 25}" width="8" height="7" rx="1.5" fill="#fff6c0"/>
+                <ellipse cx="${cx - 15}" cy="${domeTopY + 34}" rx="11" ry="24" fill="#ffffff" opacity="0.55" filter="url(#${uid}blur)"/>
+            </g>
+            <text x="${cx}" y="${height - 8}" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" fill="#3a4149">LED</text>
+        </svg>`;
     }
 
     resistorPowerValue() {
@@ -835,7 +1239,9 @@ export default class extends Controller {
         if (pf === null || !(pf > 0)) {
             event.currentTarget.classList.add("is-invalid");
             this.capPf = null;
-            this.capResultTarget.textContent = raw.trim() === "" ? "" : trans("tools.value_calc.invalid_input");
+            if (this.hasCapResultTarget) {
+                this.capResultTarget.textContent = raw.trim() === "" ? "" : trans("tools.value_calc.invalid_input");
+            }
             this.capSvgTarget.innerHTML = "";
             return;
         }
@@ -870,7 +1276,9 @@ export default class extends Controller {
         if (tol !== "") {
             text += ` · ${trans("tools.value_calc.tolerance")}: ${tol}`;
         }
-        this.capResultTarget.textContent = text;
+        if (this.hasCapResultTarget) {
+            this.capResultTarget.textContent = text;
+        }
         //Real caps print the tolerance letter right after the code (e.g. "104K").
         const marking = code ? (letter ? code + letter : code) : this.formatFarads(this.capPf);
         this.drawCapacitor(this.capSvgTarget, marking);
@@ -1046,8 +1454,16 @@ export default class extends Controller {
             this.dimH(cx - r, cx + r, topMargin - 12, `⌀ ${this.formatMm(diam)}`)
             + this.dimH(leadX1, leadX2, H - 10, pitchLabel);
 
+        //The body shows the printed code (and voltage); add the decoded capacitance + tolerance below.
+        const capTol = this.capToleranceText();
+        const valueLabel = this.capPf > 0 ? this.formatFarads(this.capPf) + (capTol ? ` · ${capTol}` : "") : "";
+        const totalH = H + (valueLabel ? 24 : 0);
+        const valueCaption = valueLabel
+            ? `<text x="${cx}" y="${totalH - 8}" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" fill="#3a4149">${valueLabel}</text>`
+            : "";
+
         const svg = `
-        <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="max-width: 250px; width: 100%; height: auto;">
+        <svg viewBox="0 0 ${W} ${totalH}" xmlns="http://www.w3.org/2000/svg" style="max-width: 250px; width: 100%; height: auto;">
             <defs>
                 ${this.leadGradient(uid)}
                 ${this.blurFilter(uid)}
@@ -1075,6 +1491,7 @@ export default class extends Controller {
                 ${voltageSvg}
             </g>
             ${callouts}
+            ${valueCaption}
         </svg>`;
         target.innerHTML = svg;
         this.updateCapSpec();
@@ -1211,9 +1628,25 @@ export default class extends Controller {
     }
 
     /** Soft, slightly offset drop shadow filter. */
+    /**
+     * A soft, slightly offset drop shadow, built from primitives that survive the server-side SVG
+     * sanitizer applied when the picture is attached to a part. The shorthand <feDropShadow> element
+     * is NOT on the sanitizer's filter-primitive allow-list and gets stripped on save, leaving an
+     * empty <filter> — which the SVG spec defines as fully transparent, silently hiding whatever
+     * element referenced it (only visible once the attachment is viewed as a real, saved image
+     * rather than in this live preview). This is the equivalent built from feGaussianBlur/feOffset/
+     * feFlood/feComposite/feMerge, all of which are allow-listed and pass through unchanged.
+     */
     shadowFilter(uid) {
         return `<filter id="${uid}shadow" x="-15%" y="-20%" width="130%" height="160%">
-            <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#000000" flood-opacity="0.28"/>
+            <feGaussianBlur in="SourceAlpha" stdDeviation="5" result="${uid}blurShadow"/>
+            <feOffset in="${uid}blurShadow" dx="0" dy="4" result="${uid}offsetShadow"/>
+            <feFlood flood-color="#000000" flood-opacity="0.28" result="${uid}floodShadow"/>
+            <feComposite in="${uid}floodShadow" in2="${uid}offsetShadow" operator="in" result="${uid}coloredShadow"/>
+            <feMerge>
+                <feMergeNode in="${uid}coloredShadow"/>
+                <feMergeNode in="SourceGraphic"/>
+            </feMerge>
         </filter>`;
     }
 
@@ -1290,7 +1723,9 @@ export default class extends Controller {
         if (ohms === null || !(ohms > 0)) {
             event.currentTarget.classList.add("is-invalid");
             this.smdOhms = null;
-            this.smdResultTarget.textContent = raw.trim() === "" ? "" : trans("tools.value_calc.invalid_input");
+            if (this.hasSmdResultTarget) {
+                this.smdResultTarget.textContent = raw.trim() === "" ? "" : trans("tools.value_calc.invalid_input");
+            }
             this.smdSvgTarget.innerHTML = "";
             return;
         }
@@ -1338,8 +1773,10 @@ export default class extends Controller {
         };
         const mark = this.smdMarking || "code3";
         const marking = codes[mark] || codes.code3 || this.formatOhms(this.smdOhms);
-        this.smdResultTarget.textContent = this.formatOhms(this.smdOhms);
-        this.drawSmd(this.smdSvgTarget, marking);
+        if (this.hasSmdResultTarget) {
+            this.smdResultTarget.textContent = this.formatOhms(this.smdOhms);
+        }
+        this.drawSmd(this.smdSvgTarget, marking, {tolerance: this.smdTolerance, voltage: this.smdVoltage});
         this.highlightSmdMarking();
     }
 
@@ -1479,10 +1916,9 @@ export default class extends Controller {
     }
 
     /** Draws a 3D-shaded SMD chip resistor with marking and dimension callouts. */
-    drawSmd(target, marking) {
+    drawSmd(target, marking, spec = {}) {
         const uid = this.svgId();
         const w = 300;
-        const h = 190;
         const pkgKey = this.smdPackageValue();
         const pkg = SMD_PACKAGES[pkgKey];
 
@@ -1517,6 +1953,13 @@ export default class extends Controller {
             this.dimH(bodyX, bodyX + bodyW, bodyBottom + 18, `L ${this.formatMm(pkg.l)}`)
             + this.dimV(bodyY, bodyBottom, bodyX + bodyW + 16, `W ${this.formatMm(pkg.w)}`, bodyX + bodyW);
 
+        //The chip itself shows the printed code; print the decoded value (+ tolerance) as a caption below.
+        const valueLabel = this.smdOhms > 0 ? this.formatOhms(this.smdOhms) + this.specSuffix(spec) : "";
+        const h = bodyBottom + 54;
+        const valueCaption = valueLabel
+            ? `<text x="${cx}" y="${h - 12}" text-anchor="middle" font-family="monospace" font-size="16" font-weight="700" fill="#3a4149">${valueLabel}</text>`
+            : "";
+
         const svg = `
         <svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" style="max-width: 300px; width: 100%; height: auto;">
             <defs>
@@ -1539,6 +1982,7 @@ export default class extends Controller {
                       font-family="monospace" font-weight="bold" font-size="${fontSize}" fill="${textColor}">${marking}</text>
             </g>
             ${callouts}
+            ${valueCaption}
         </svg>`;
         target.innerHTML = svg;
 
@@ -1552,6 +1996,209 @@ export default class extends Controller {
         const v = this.hasSmdPackageTarget ? this.smdPackageTarget.value : "0805";
         return SMD_PACKAGES[v] ? v : "0805";
     }
+
+    /*
+     * ---------------------------------------------------------------
+     *  SMD capacitor tab (interactive) — an MLCC chip. These are (almost) always unmarked, so there
+     *  is nothing to decode: you enter the value + package and it draws the picture to attach.
+     * ---------------------------------------------------------------
+     */
+
+    /** Reads the SMD-capacitor value input and redraws the MLCC chip. */
+    syncSmdCap() {
+        if (!this.hasSmdCapSvgTarget) {
+            return;
+        }
+        const raw = this.hasSmdCapValueInputTarget ? this.smdCapValueInputTarget.value : "100n";
+        const farads = this.parseValue(raw, "F");
+        if (farads === null || !(farads > 0)) {
+            if (this.hasSmdCapValueInputTarget) {
+                this.smdCapValueInputTarget.classList.toggle("is-invalid", (raw || "").trim() !== "");
+            }
+            this.smdCapSvgTarget.innerHTML = "";
+            return;
+        }
+        if (this.hasSmdCapValueInputTarget) {
+            this.smdCapValueInputTarget.classList.remove("is-invalid");
+        }
+        this.smdCapPf = farads * 1e12; //formatFarads() works in picofarads
+        this.drawSmdCapacitor(this.smdCapSvgTarget, {
+            package: this.smdCapPackageValue(),
+            bodyColor: this.hasSmdCapBodyColorTarget ? this.smdCapBodyColorTarget.value : null,
+            voltage: this.hasSmdCapVoltageTarget ? this.smdCapVoltageTarget.value : null,
+            tolerance: this.hasSmdCapToleranceTarget ? this.smdCapToleranceTarget.value : null,
+            specEl: this.hasSmdCapSpecTarget ? this.smdCapSpecTarget : null,
+        });
+    }
+
+    smdCapPackageValue() {
+        const v = this.hasSmdCapPackageTarget ? this.smdCapPackageTarget.value : "0805";
+        return SMD_PACKAGES[v] ? v : "0805";
+    }
+
+    applySmdCapBodyColor(event) {
+        if (this.hasSmdCapBodyColorTarget) {
+            this.smdCapBodyColorTarget.value = event.currentTarget.dataset.color;
+        }
+        this.syncSmdCap();
+    }
+
+    /**
+     * Draws a surface-mount MLCC capacitor: a tan ceramic block with wide metal end terminations and
+     * (as on real MLCCs) no printed marking — the decoded value is shown as a caption below instead.
+     */
+    drawSmdCapacitor(target, options = {}) {
+        const uid = this.svgId();
+        const w = 300;
+        const pkgKey = SMD_PACKAGES[options.package] ? options.package : "0805";
+        const pkg = SMD_PACKAGES[pkgKey];
+
+        const bodyW = Math.round(120 + 90 * (pkg.l - 0.6) / (6.3 - 0.6));
+        const aspect = pkg.l / pkg.w;
+        const bodyH = Math.max(48, Math.min(122, Math.round(bodyW / aspect)));
+        //MLCC end terminations are noticeably wider than a chip resistor's.
+        const termW = Math.max(20, Math.round(bodyW * 0.20));
+
+        const cx = w / 2;
+        const bodyX = Math.round(cx - bodyW / 2);
+        const bodyY = Math.round(78 - bodyH / 2);
+        const bodyBottom = bodyY + bodyH;
+        const innerX = bodyX + termW;
+        const innerW = bodyW - 2 * termW;
+
+        const fill = options.bodyColor || "#c8a37a";
+
+        const callouts =
+            this.dimH(bodyX, bodyX + bodyW, bodyBottom + 18, `L ${this.formatMm(pkg.l)}`)
+            + this.dimV(bodyY, bodyBottom, bodyX + bodyW + 16, `W ${this.formatMm(pkg.w)}`, bodyX + bodyW);
+
+        const valueLabel = this.smdCapPf > 0 ? this.formatFarads(this.smdCapPf) + this.specSuffix(options) : "";
+        const h = bodyBottom + 54;
+        const valueCaption = valueLabel
+            ? `<text x="${cx}" y="${h - 12}" text-anchor="middle" font-family="monospace" font-size="16" font-weight="700" fill="#3a4149">${valueLabel}</text>`
+            : "";
+
+        target.innerHTML = `
+        <svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" style="max-width: 300px; width: 100%; height: auto;">
+            <defs>
+                ${this.metalGradient(uid)}
+                ${this.glossGradient(uid)}
+                ${this.blurFilter(uid)}
+                <clipPath id="${uid}clip"><rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="10" ry="10"/></clipPath>
+                ${this.shadowFilter(uid)}
+            </defs>
+            <g>
+                <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="10" ry="10" fill="url(#${uid}metal)" stroke="#00000055" stroke-width="1" filter="url(#${uid}shadow)"/>
+                <g clip-path="url(#${uid}clip)">
+                    <rect x="${innerX}" y="${bodyY}" width="${innerW}" height="${bodyH}" fill="${fill}"/>
+                    <rect x="${innerX}" y="${bodyY}" width="${innerW}" height="${bodyH}" fill="url(#${uid}gloss)"/>
+                    <rect x="${innerX}" y="${bodyY + 2}" width="${innerW}" height="3" fill="#ffffff" opacity="0.22"/>
+                    <rect x="${innerX - 2}" y="${bodyY}" width="3" height="${bodyH}" fill="#000000" opacity="0.25"/>
+                    <rect x="${innerX + innerW - 1}" y="${bodyY}" width="3" height="${bodyH}" fill="#000000" opacity="0.25"/>
+                </g>
+            </g>
+            ${callouts}
+            ${valueCaption}
+        </svg>`;
+
+        if (options.specEl) {
+            options.specEl.textContent =
+                `${pkgKey} (${pkg.metric}) · ${this.formatMm(pkg.l)} × ${this.formatMm(pkg.w)}${valueLabel ? ` · ${valueLabel}` : ""}`;
+        }
+    }
+
+    /*
+     * ---------------------------------------------------------------
+     *  SMD inductor tab (interactive)
+     * ---------------------------------------------------------------
+     */
+
+    /**
+     * Recomputes the linked SMD-inductor value/code fields (and the picture) from whichever was
+     * edited — typing a value fills the code, and (like the SMD resistor tab) typing a code fills
+     * the value. Called with no event for programmatic redraws (package/colour change, init).
+     */
+    syncSmdInductor(event) {
+        if (!this.hasSmdIndSvgTarget) {
+            return;
+        }
+        const field = event && event.currentTarget && event.currentTarget.dataset ? event.currentTarget.dataset.field : null;
+        const activeInput = field === "code" && this.hasSmdIndCodeTarget ? this.smdIndCodeTarget
+            : (this.hasSmdIndValueInputTarget ? this.smdIndValueInputTarget : null);
+
+        let henries;
+        if (field === "code") {
+            henries = this.inductorCodeToHenries(this.hasSmdIndCodeTarget ? this.smdIndCodeTarget.value : "");
+        } else {
+            const raw = this.hasSmdIndValueInputTarget ? this.smdIndValueInputTarget.value : "100u";
+            //Accept "100µH", "10mH", "4.7uH", "1H" — strip the trailing H, then reuse the numeric parser.
+            const s = (raw || "").trim().replace(/h$/i, "").trim();
+            henries = this.parseValue(s, "R");
+        }
+
+        if (henries === null || !(henries > 0)) {
+            if (activeInput) {
+                activeInput.classList.toggle("is-invalid", activeInput.value.trim() !== "");
+            }
+            this.smdIndSvgTarget.innerHTML = "";
+            return;
+        }
+        if (activeInput) {
+            activeInput.classList.remove("is-invalid");
+        }
+
+        const marking = this.henriesToInductorCode(henries / 1e-6);
+        if (field !== "code" && this.hasSmdIndCodeTarget) {
+            this.smdIndCodeTarget.value = marking;
+        }
+        if (field !== "value" && this.hasSmdIndValueInputTarget) {
+            this.smdIndValueInputTarget.value = this.formatHenries(henries);
+        }
+        this.drawSmdInductor(this.smdIndSvgTarget, marking, henries, {
+            package: this.smdIndPackageValue(),
+            bodyColor: this.hasSmdIndBodyColorTarget ? this.smdIndBodyColorTarget.value : null,
+            specEl: this.hasSmdIndSpecTarget ? this.smdIndSpecTarget : null,
+        });
+    }
+
+    /**
+     * Parses an SMD-inductor marking back to henries: R-notation (4R7 = 4.7 µH) or the 3-digit EIA
+     * code (101 = 100 µH), the same two forms {@see henriesToInductorCode} prints. Returns null for
+     * anything else (e.g. a 4-digit or EIA-96 code, which this chip type isn't drawn with).
+     */
+    inductorCodeToHenries(raw) {
+        const code = (raw || "").trim().toUpperCase();
+        if (code === "") {
+            return null;
+        }
+        if (code.includes("R") && /^\d*R\d*$/.test(code)) {
+            const v = parseFloat(code.replace("R", "."));
+            return Number.isNaN(v) ? null : v * 1e-6;
+        }
+        if (/^\d{3}$/.test(code)) {
+            const uH = parseInt(code.substring(0, 2), 10) * Math.pow(10, parseInt(code.charAt(2), 10));
+            return uH * 1e-6;
+        }
+        return null;
+    }
+
+    smdIndPackageValue() {
+        const v = this.hasSmdIndPackageTarget ? this.smdIndPackageTarget.value : "1210";
+        return SMD_PACKAGES[v] ? v : "1210";
+    }
+
+    applySmdIndBodyColor(event) {
+        if (this.hasSmdIndBodyColorTarget) {
+            this.smdIndBodyColorTarget.value = event.currentTarget.dataset.color;
+        }
+        this.syncSmdInductor();
+    }
+
+    /*
+     * ---------------------------------------------------------------
+     *  Diode tab (interactive)
+     * ---------------------------------------------------------------
+     */
 
     /*
      * ---------------------------------------------------------------

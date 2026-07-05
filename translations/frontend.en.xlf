@@ -55,6 +55,12 @@
         <target>Go!</target>
       </segment>
     </unit>
+    <unit id="vcalc_band" name="tools.value_calc.band">
+      <segment state="translated">
+        <source>tools.value_calc.band</source>
+        <target>band</target>
+      </segment>
+    </unit>
     <unit id="vcalc_band_digit" name="tools.value_calc.resistor.band_digit">
       <segment state="translated">
         <source>tools.value_calc.resistor.band_digit</source>
