@@ -13289,6 +13289,12 @@ Buerklin-API Authentication server:
         <target>Body color</target>
       </segment>
     </unit>
+    <unit id="vcalc_appearance" name="tools.value_calc.appearance">
+      <segment state="translated">
+        <source>tools.value_calc.appearance</source>
+        <target>Picture appearance (for the generated image)</target>
+      </segment>
+    </unit>
     <unit id="vcalc_body_beige" name="tools.value_calc.body.beige">
       <segment state="translated">
         <source>tools.value_calc.body.beige</source>
