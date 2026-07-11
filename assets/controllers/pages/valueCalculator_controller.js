@@ -1012,20 +1012,34 @@ export default class extends Controller {
         const pkgKey = SMD_PACKAGES[options.package] ? options.package : "1210";
         const pkg = SMD_PACKAGES[pkgKey];
 
-        //Power inductors are chunky and near-square; size the block from the package footprint.
+        //Molded / shielded SMD power inductor: a chunky, near-square composite block with matte tin
+        //terminations wrapping two edges and a faint coil impression moulded into the top face.
         const bodyW = Math.round(120 + 95 * (pkg.l - 0.6) / (6.3 - 0.6));
-        const bodyH = Math.max(70, Math.min(140, Math.round(bodyW * 0.82)));
+        const bodyH = Math.max(84, Math.min(150, Math.round(bodyW * 0.86)));
         const cx = w / 2;
         const bodyX = Math.round(cx - bodyW / 2);
-        const bodyY = Math.round(86 - bodyH / 2);
+        const bodyY = Math.round(82 - bodyH / 2);
         const bodyBottom = bodyY + bodyH;
         const cy = bodyY + bodyH / 2;
-        const termW = Math.max(12, Math.round(bodyW * 0.12));
-        const rx = Math.max(10, Math.round(bodyW * 0.11));
+        const rx = Math.max(12, Math.round(bodyW * 0.14));
+        const termW = Math.max(15, Math.round(bodyW * 0.17));
 
-        const fill = options.bodyColor || "#38332e";
+        const fill = options.bodyColor || "#43454d";       // matte charcoal composite
+        const top = this.shadeColor(fill, 0.24);
+        const bottom = this.shadeColor(fill, -0.30);
+        const groove = this.shadeColor(fill, -0.45);
+        const ridge = this.shadeColor(fill, 0.30);
         const textColor = this.contrastColor(fill);
-        const fontSize = Math.max(15, Math.min(38, Math.round(bodyH * 0.42), Math.round(bodyW * 1.5 / Math.max(3, marking.length))));
+        const fontSize = Math.max(14, Math.min(30, Math.round(bodyH * 0.30), Math.round(bodyW * 1.4 / Math.max(3, marking.length))));
+
+        //Concentric racetrack moulded into the top — the tell-tale sign it's a wound inductor.
+        const coilRx = bodyW * 0.30, coilRy = bodyH * 0.32;
+        const ring = (sx, sy, sw, col, op) =>
+            `<ellipse cx="${cx}" cy="${cy}" rx="${sx}" ry="${sy}" fill="none" stroke="${col}" stroke-width="${sw}" opacity="${op}"/>`;
+        const coil =
+            ring(coilRx, coilRy, 2.2, groove, 0.5)
+            + ring(coilRx - 1.6, coilRy - 1.6, 1, ridge, 0.32)
+            + ring(coilRx * 0.6, coilRy * 0.6, 2.2, groove, 0.45);
 
         const callouts =
             this.dimH(bodyX, bodyX + bodyW, bodyBottom + 20, `L ${this.formatMm(pkg.l)}`)
@@ -1036,23 +1050,28 @@ export default class extends Controller {
         <svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" style="max-width: 300px; width: 100%; height: auto;">
             <defs>
                 ${this.metalGradient(uid)}
-                ${this.glossGradient(uid)}
-                ${this.specularGradient(uid)}
                 ${this.blurFilter(uid)}
+                <linearGradient id="${uid}body" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stop-color="${top}"/>
+                    <stop offset="0.5" stop-color="${fill}"/>
+                    <stop offset="1" stop-color="${bottom}"/>
+                </linearGradient>
                 <clipPath id="${uid}clip"><rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="${rx}" ry="${rx}"/></clipPath>
                 ${this.shadowFilter(uid)}
             </defs>
             <g>
-                <rect x="${bodyX - 3}" y="${bodyY + bodyH * 0.24}" width="${termW + 6}" height="${bodyH * 0.52}" rx="4" fill="url(#${uid}metal)" stroke="#00000044" stroke-width="1"/>
-                <rect x="${bodyX + bodyW - termW - 3}" y="${bodyY + bodyH * 0.24}" width="${termW + 6}" height="${bodyH * 0.52}" rx="4" fill="url(#${uid}metal)" stroke="#00000044" stroke-width="1"/>
-                <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="${rx}" ry="${rx}" fill="${fill}" stroke="#00000066" stroke-width="1" filter="url(#${uid}shadow)"/>
+                <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="${rx}" ry="${rx}" fill="url(#${uid}body)" stroke="#00000066" stroke-width="1" filter="url(#${uid}shadow)"/>
                 <g clip-path="url(#${uid}clip)">
-                    <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" fill="url(#${uid}gloss)"/>
-                    <ellipse cx="${cx}" cy="${bodyY + bodyH * 0.30}" rx="${bodyW * 0.42}" ry="${bodyH * 0.30}" fill="url(#${uid}spec)" opacity="0.5"/>
-                    <ellipse cx="${cx}" cy="${bodyY + bodyH * 0.18}" rx="${bodyW * 0.30}" ry="4" fill="#ffffff" opacity="0.35" filter="url(#${uid}blur)"/>
+                    <rect x="${bodyX}" y="${bodyY}" width="${termW}" height="${bodyH}" fill="url(#${uid}metal)"/>
+                    <rect x="${bodyX + bodyW - termW}" y="${bodyY}" width="${termW}" height="${bodyH}" fill="url(#${uid}metal)"/>
+                    <rect x="${bodyX + termW}" y="${bodyY}" width="3" height="${bodyH}" fill="#000000" opacity="0.26"/>
+                    <rect x="${bodyX + bodyW - termW - 3}" y="${bodyY}" width="3" height="${bodyH}" fill="#000000" opacity="0.26"/>
+                    ${coil}
+                    <ellipse cx="${cx}" cy="${bodyY + bodyH * 0.16}" rx="${bodyW * 0.30}" ry="6" fill="#ffffff" opacity="0.13" filter="url(#${uid}blur)"/>
                 </g>
+                <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="${rx}" ry="${rx}" fill="none" stroke="#00000055" stroke-width="1"/>
                 <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central"
-                      font-family="monospace" font-weight="bold" font-size="${fontSize}" fill="${textColor}" style="paint-order:stroke" stroke="${fill}" stroke-width="0.6">${marking}</text>
+                      font-family="monospace" font-weight="bold" font-size="${fontSize}" fill="${textColor}" style="paint-order:stroke" stroke="${fill}" stroke-width="0.7">${marking}</text>
             </g>
             ${callouts}
         </svg>`;
@@ -1707,6 +1726,20 @@ export default class extends Controller {
         const b = parseInt(c.substring(4, 6), 16);
         const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
         return luminance > 0.6 ? "#1a1100" : "#f5f5f5";
+    }
+
+    /** Lightens (t > 0) or darkens (t < 0) a #rrggbb colour by fraction t (-1..1). */
+    shadeColor(hex, t) {
+        const c = hex.replace("#", "");
+        if (c.length < 6) {
+            return hex;
+        }
+        const chan = (i) => {
+            const v = parseInt(c.substring(i, i + 2), 16);
+            const nv = t < 0 ? v * (1 + t) : v + (255 - v) * t;
+            return Math.max(0, Math.min(255, Math.round(nv))).toString(16).padStart(2, "0");
+        };
+        return `#${chan(0)}${chan(2)}${chan(4)}`;
     }
 
     /*
