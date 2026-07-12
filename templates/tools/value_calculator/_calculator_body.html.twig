@@ -497,7 +497,7 @@
                                 <div class="row mb-2">
                                     <label for="vc-smdind-package" class="col-sm-3 col-form-label">{% trans %}tools.value_calc.smd.package{% endtrans %}</label>
                                     <div class="col-sm-9">
-                                        <select class="form-select" id="vc-smdind-package" style="max-width: 18rem;"
+                                        <select class="form-select" id="vc-smdind-package" style="max-width: 18rem;" autocomplete="off"
                                                 {{ stimulus_target('pages/valueCalculator', 'smdIndPackage') }}
                                                 {{ stimulus_action('pages/valueCalculator', 'syncSmdInductor', 'change') }}>
                                             <option value="0402">0402 (1005 metric)</option>

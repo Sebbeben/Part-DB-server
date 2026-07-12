@@ -1011,13 +1011,15 @@ export default class extends Controller {
         const pkgKey = SMD_PACKAGES[options.package] ? options.package : "1210";
         const pkg = SMD_PACKAGES[pkgKey];
 
-        //Simple top-down square chip with the value code printed on it (same style as the SMD resistor).
+        //Simple top-down chip with the value code printed on it (same style as the SMD resistor); the
+        //body follows the package L:W ratio so a 1210 looks square and a 0402 a 2:1 rectangle.
         const bodyW = Math.round(122 + 66 * (pkg.l - 0.6) / (6.3 - 0.6));
-        const bodyH = bodyW;                                   // square
-        const capW = Math.max(16, Math.round(bodyW * 0.16));
+        const aspect = pkg.l / pkg.w;
+        const bodyH = Math.max(48, Math.min(140, Math.round(bodyW / aspect)));
+        const capW = Math.max(14, Math.round(bodyW * 0.14));
         const cx = w / 2;
         const bodyX = Math.round(cx - bodyW / 2);
-        const bodyY = 20;
+        const bodyY = Math.round(84 - bodyH / 2);
         const bodyBottom = bodyY + bodyH;
         const cy = bodyY + bodyH / 2;
         const innerX = bodyX + capW;
@@ -1025,7 +1027,7 @@ export default class extends Controller {
 
         const fill = options.bodyColor || "#33363d";
         const textColor = this.contrastColor(fill);
-        const fontSize = Math.max(16, Math.min(40, Math.round(bodyH * 0.34), Math.round(innerW * 1.7 / Math.max(3, marking.length))));
+        const fontSize = Math.max(15, Math.min(38, Math.round(bodyH * 0.5), Math.round(innerW * 1.6 / Math.max(3, marking.length))));
 
         const callouts =
             this.dimH(bodyX, bodyX + bodyW, bodyBottom + 18, `L ${this.formatMm(pkg.l)}`)
