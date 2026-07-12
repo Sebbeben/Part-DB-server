@@ -1008,93 +1008,53 @@ export default class extends Controller {
     drawSmdInductor(target, marking, henries, options = {}) {
         const uid = this.svgId();
         const w = 300;
-        const h = 210;
         const pkgKey = SMD_PACKAGES[options.package] ? options.package : "1210";
         const pkg = SMD_PACKAGES[pkgKey];
 
-        //Shielded wire-wound SMD power inductor: a square-ish molded housing seen in 3/4 view with a
-        //raised drum core on top carrying the value code, and tin terminals wrapping under two edges.
-        const s = Math.round(104 + 66 * (pkg.l - 0.6) / (6.3 - 0.6));   // front width (px)
-        const wallH = Math.round(s * 0.56);                            // housing height
-        const skewX = Math.round(s * 0.40);                            // depth → right
-        const skewY = Math.round(s * 0.27);                            // depth → up
-        const r = Math.max(5, Math.round(s * 0.09));                   // edge radius
+        //Simple top-down square chip with the value code printed on it (same style as the SMD resistor).
+        const bodyW = Math.round(122 + 66 * (pkg.l - 0.6) / (6.3 - 0.6));
+        const bodyH = bodyW;                                   // square
+        const capW = Math.max(16, Math.round(bodyW * 0.16));
+        const cx = w / 2;
+        const bodyX = Math.round(cx - bodyW / 2);
+        const bodyY = 20;
+        const bodyBottom = bodyY + bodyH;
+        const cy = bodyY + bodyH / 2;
+        const innerX = bodyX + capW;
+        const innerW = bodyW - 2 * capW;
 
-        const P0x = Math.round((w - (s + skewX)) / 2);
-        const P0y = Math.round(((h - 26) - (skewY + wallH)) / 2) + skewY;
-
-        const fill = options.bodyColor || "#4a4c52";
-        const topLight = this.shadeColor(fill, 0.30), topDark = this.shadeColor(fill, 0.10);
-        const frontLight = this.shadeColor(fill, -0.03), frontDark = this.shadeColor(fill, -0.30);
-        const rightLight = this.shadeColor(fill, -0.34), rightDark = this.shadeColor(fill, -0.50);
-        const drumHi = this.shadeColor(fill, 0.58), drumLo = this.shadeColor(fill, 0.34);
-        const drumSideL = this.shadeColor(fill, 0.30), drumSideD = this.shadeColor(fill, 0.06);
-        const groove = this.shadeColor(fill, -0.18);
-        const edge = "#00000055";
-
-        //Housing faces (3/4 view: front + top + right).
-        const FR = [P0x + s, P0y];
-        const BL = [P0x + skewX, P0y - skewY], BR = [P0x + s + skewX, P0y - skewY];
-        const FRb = [P0x + s, P0y + wallH];
-        const BRb = [P0x + s + skewX, P0y - skewY + wallH];
-        const pp = (arr) => arr.map((p) => `${p[0]},${p[1]}`).join(" ");
-        const topFace = pp([[P0x, P0y], FR, BR, BL]);
-        const rightFace = pp([FR, BR, BRb, FRb]);
-
-        //Raised drum on the top face.
-        const cx = P0x + s / 2 + skewX / 2;
-        const cyBase = P0y - skewY / 2;
-        const drumRx = s * 0.36, drumRy = s * 0.20;
-        const drumH = Math.round(s * 0.10);
-        const cyTop = cyBase - drumH;
-        const fontSize = Math.max(13, Math.min(26, Math.round(drumRy * 1.7), Math.round(drumRx * 1.7 / Math.max(3, marking.length))));
-
-        //Tin terminals wrapping under the front-bottom corners.
-        const tW = Math.round(s * 0.26), tUp = Math.round(wallH * 0.30);
-        const foot = (x0) => `<g>
-            <rect x="${x0}" y="${P0y + wallH - tUp}" width="${tW}" height="${tUp + 6}" rx="3" fill="url(#${uid}metal)" stroke="${edge}" stroke-width="1"/>
-            <rect x="${x0}" y="${P0y + wallH - tUp}" width="${tW}" height="3" fill="#ffffff" opacity="0.5"/>
-          </g>`;
+        const fill = options.bodyColor || "#33363d";
+        const textColor = this.contrastColor(fill);
+        const fontSize = Math.max(16, Math.min(40, Math.round(bodyH * 0.34), Math.round(innerW * 1.7 / Math.max(3, marking.length))));
 
         const callouts =
-            this.dimH(P0x, P0x + s, P0y + wallH + 26, `${this.formatMm(pkg.l)} × ${this.formatMm(pkg.w)}`)
-            + `<text x="${w / 2}" y="${h - 8}" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" fill="#3a4149">${this.formatHenries(henries)}${this.specSuffix(options)}</text>`;
+            this.dimH(bodyX, bodyX + bodyW, bodyBottom + 18, `L ${this.formatMm(pkg.l)}`)
+            + this.dimV(bodyY, bodyBottom, bodyX + bodyW + 16, `W ${this.formatMm(pkg.w)}`, bodyX + bodyW);
+
+        const h = bodyBottom + 54;
+        const valueCaption = `<text x="${cx}" y="${h - 12}" text-anchor="middle" font-family="monospace" font-size="16" font-weight="700" fill="#3a4149">${this.formatHenries(henries)}${this.specSuffix(options)}</text>`;
 
         target.innerHTML = `
         <svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" style="max-width: 300px; width: 100%; height: auto;">
             <defs>
                 ${this.metalGradient(uid)}
-                ${this.blurFilter(uid)}
-                <linearGradient id="${uid}top" x1="0" y1="1" x2="0.25" y2="0">
-                    <stop offset="0" stop-color="${topLight}"/><stop offset="1" stop-color="${topDark}"/>
-                </linearGradient>
-                <linearGradient id="${uid}front" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0" stop-color="${frontLight}"/><stop offset="1" stop-color="${frontDark}"/>
-                </linearGradient>
-                <linearGradient id="${uid}right" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0" stop-color="${rightLight}"/><stop offset="1" stop-color="${rightDark}"/>
-                </linearGradient>
-                <linearGradient id="${uid}cyl" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0" stop-color="${drumSideD}"/><stop offset="0.5" stop-color="${drumSideL}"/><stop offset="1" stop-color="${drumSideD}"/>
-                </linearGradient>
-                <radialGradient id="${uid}drum" cx="0.42" cy="0.36" r="0.75">
-                    <stop offset="0" stop-color="${drumHi}"/><stop offset="1" stop-color="${drumLo}"/>
-                </radialGradient>
+                ${this.glossGradient(uid)}
+                <clipPath id="${uid}clip"><rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="10" ry="10"/></clipPath>
+                ${this.shadowFilter(uid)}
             </defs>
-            <ellipse cx="${cx}" cy="${P0y + wallH + 7}" rx="${(s + skewX) * 0.52}" ry="9" fill="#000000" opacity="0.16" filter="url(#${uid}blur)"/>
-            <g stroke-linejoin="round">
-                <polygon points="${rightFace}" fill="url(#${uid}right)" stroke="${edge}" stroke-width="1.5"/>
-                <rect x="${P0x}" y="${P0y}" width="${s}" height="${wallH}" rx="${r}" fill="url(#${uid}front)" stroke="${edge}" stroke-width="1.5"/>
-                <polygon points="${topFace}" fill="url(#${uid}top)" stroke="${edge}" stroke-width="2"/>
-                ${foot(P0x + Math.round(s * 0.06))}
-                ${foot(P0x + s - tW - Math.round(s * 0.06))}
-                <ellipse cx="${cx}" cy="${cyBase}" rx="${drumRx}" ry="${drumRy}" fill="${drumSideD}"/>
-                <rect x="${cx - drumRx}" y="${cyTop}" width="${drumRx * 2}" height="${drumH}" fill="url(#${uid}cyl)"/>
-                <ellipse cx="${cx}" cy="${cyTop}" rx="${drumRx}" ry="${drumRy}" fill="url(#${uid}drum)" stroke="${groove}" stroke-width="1.5"/>
-                <ellipse cx="${cx}" cy="${cyTop}" rx="${drumRx * 0.8}" ry="${drumRy * 0.8}" fill="none" stroke="${groove}" stroke-width="1" opacity="0.45"/>
-                <text x="${cx}" y="${cyTop}" text-anchor="middle" dominant-baseline="central" font-family="monospace" font-weight="bold" font-size="${fontSize}" fill="${this.contrastColor(drumLo)}">${marking}</text>
+            <g>
+                <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="10" ry="10" fill="url(#${uid}metal)" stroke="#00000055" stroke-width="1" filter="url(#${uid}shadow)"/>
+                <g clip-path="url(#${uid}clip)">
+                    <rect x="${innerX}" y="${bodyY}" width="${innerW}" height="${bodyH}" fill="${fill}"/>
+                    <rect x="${innerX}" y="${bodyY}" width="${innerW}" height="${bodyH}" fill="url(#${uid}gloss)"/>
+                    <rect x="${innerX - 2}" y="${bodyY}" width="3" height="${bodyH}" fill="#000000" opacity="0.28"/>
+                    <rect x="${innerX + innerW - 1}" y="${bodyY}" width="3" height="${bodyH}" fill="#000000" opacity="0.28"/>
+                </g>
+                <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central"
+                      font-family="monospace" font-weight="bold" font-size="${fontSize}" fill="${textColor}">${marking}</text>
             </g>
             ${callouts}
+            ${valueCaption}
         </svg>`;
 
         if (options.specEl) {
@@ -1747,20 +1707,6 @@ export default class extends Controller {
         const b = parseInt(c.substring(4, 6), 16);
         const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
         return luminance > 0.6 ? "#1a1100" : "#f5f5f5";
-    }
-
-    /** Lightens (t > 0) or darkens (t < 0) a #rrggbb colour by fraction t (-1..1). */
-    shadeColor(hex, t) {
-        const c = hex.replace("#", "");
-        if (c.length < 6) {
-            return hex;
-        }
-        const chan = (i) => {
-            const v = parseInt(c.substring(i, i + 2), 16);
-            const nv = t < 0 ? v * (1 + t) : v + (255 - v) * t;
-            return Math.max(0, Math.min(255, Math.round(nv))).toString(16).padStart(2, "0");
-        };
-        return `#${chan(0)}${chan(2)}${chan(4)}`;
     }
 
     /*
