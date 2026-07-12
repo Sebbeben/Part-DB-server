@@ -2,6 +2,11 @@
         /* Keep every preview the same footprint so the panel doesn't jump between tabs. */
         .vc-pic { display: flex; align-items: center; justify-content: center; min-height: 14rem; }
         .vc-pic svg { max-height: 15rem; max-width: 100%; width: auto; height: auto; }
+        /* Every tab reserves the same height and lays out as a column, so the row can grow to fill it
+           and the "Appearance" toggle always pins to the very bottom of the frame — identical on each
+           tab whether or not the tab has an intro line above its controls. */
+        .tab-content > .tab-pane { min-height: 24rem; }
+        .tab-content > .tab-pane.active { display: flex; flex-direction: column; }
         /* The "Appearance" disclosure is pinned to the bottom of its column. On wide screens it
            opens *upward* as a floating popover, so toggling it never resizes the tab or nudges the
            picture — every tab keeps the exact same frame whether it's open or closed. */
@@ -68,10 +73,10 @@
         </ul>
 
         {# min-height keeps the card the same size on every tab, so switching tabs doesn't resize the panel #}
-        <div class="tab-content" style="min-height: 24rem;">
+        <div class="tab-content">
             {# ---------------- Resistor color code ---------------- #}
             <div class="tab-pane fade show active" id="vc-resistor" role="tabpanel" data-vc-name="{% trans %}tools.value_calc.resistor.title{% endtrans %}">
-                <div class="row g-4">
+                <div class="row g-4 flex-grow-1">
                     <div class="col-lg-7 d-flex flex-column">
                         <div class="row mb-3">
                             <label class="col-sm-3 col-form-label">{% trans %}tools.value_calc.resistor.bands{% endtrans %}</label>
@@ -162,7 +167,7 @@
             {# ---------------- Capacitor code ---------------- #}
             <div class="tab-pane fade" id="vc-capacitor" role="tabpanel" data-vc-name="{% trans %}tools.value_calc.capacitor.title{% endtrans %}">
                 <p class="text-muted">{% trans %}tools.value_calc.capacitor.intro{% endtrans %}</p>
-                <div class="row g-4">
+                <div class="row g-4 flex-grow-1">
                     <div class="col-lg-7 d-flex flex-column">
                         <div class="row g-3 mb-3">
                             <div class="col-sm-4">
@@ -301,7 +306,7 @@
 
             {# ---------------- SMD resistor code ---------------- #}
             <div class="tab-pane fade" id="vc-smd" role="tabpanel" data-vc-name="{% trans %}tools.value_calc.smd.title{% endtrans %}">
-                <div class="row g-4">
+                <div class="row g-4 flex-grow-1">
                     <div class="col-lg-7 d-flex flex-column">
                         <div class="form-text mb-1">{% trans %}tools.value_calc.smd.on_chip_help{% endtrans %}</div>
                         <div class="row g-3 mb-3">
@@ -398,7 +403,7 @@
             {# ---------------- THT inductor colour code ---------------- #}
             <div class="tab-pane fade" id="vc-inductor" role="tabpanel" data-vc-name="{% trans %}tools.value_calc.inductor.title{% endtrans %}">
                 <p class="text-muted">{% trans %}tools.value_calc.inductor.intro{% endtrans %}</p>
-                <div class="row g-4">
+                <div class="row g-4 flex-grow-1">
                     <div class="col-lg-7 d-flex flex-column">
                         <div class="row mb-3">
                             <label class="col-sm-3 col-form-label">{% trans %}tools.value_calc.resistor.bands{% endtrans %}</label>
@@ -469,7 +474,7 @@
             {# ---------------- SMD inductor code ---------------- #}
             <div class="tab-pane fade" id="vc-smdind" role="tabpanel" data-vc-name="{% trans %}tools.value_calc.inductor.title{% endtrans %}">
                 <p class="text-muted">{% trans %}tools.value_calc.smd_inductor.intro{% endtrans %}</p>
-                <div class="row g-4">
+                <div class="row g-4 flex-grow-1">
                     <div class="col-lg-7 d-flex flex-column">
                         <div class="row g-3 mb-3">
                             <div class="col-sm-6">
