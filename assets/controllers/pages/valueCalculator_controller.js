@@ -850,7 +850,7 @@ export default class extends Controller {
             bands += `<rect x="${x - bandW / 2}" y="${bodyY - 2}" width="${bandW}" height="${bodyH + 4}" fill="${c.hex}"/>`;
         });
 
-        const body = this.bodyColor(this.hasResistorBodyColorTarget ? this.resistorBodyColorTarget : null, "#d8c7a0");
+        const body = this.safeColor(this.bodyColor(this.hasResistorBodyColorTarget ? this.resistorBodyColorTarget : null, "#d8c7a0"), "#d8c7a0");
         const dim = RESISTOR_POWERS[this.resistorPowerValue()];
         //The bands are the "real" value encoding, but printing the decoded value too (like every
         //other drawing in this tool) makes the picture self-explanatory on its own.
@@ -929,11 +929,11 @@ export default class extends Controller {
         });
 
         const colorTarget = bodyColorOverride ? {value: bodyColorOverride} : (this.hasResistorBodyColorTarget ? this.resistorBodyColorTarget : null);
-        const body = this.bodyColor(colorTarget, "#2f6f4c");
+        const body = this.safeColor(this.bodyColor(colorTarget, "#2f6f4c"), "#2f6f4c");
+        //A colour-coded THT inductor's physical size isn't implied by its inductance, so we don't
+        //draw a (fake) dimension callout here — just the decoded value below the barrel.
         const callouts =
-            this.dimH(bodyX, bodyX + bodyW, bodyBottom + 16, "L 10.0 mm")
-            + this.dimV(bodyY, bodyBottom, bodyX + bodyW + 28, "⌀ 6.0 mm", bodyX + bodyW)
-            + `<text x="${width / 2}" y="${height - 12}" text-anchor="middle" font-family="monospace" font-size="16" font-weight="700" fill="#3a4149">${this.formatHenries(henries)}${this.specSuffix(spec)}</text>`;
+            `<text x="${width / 2}" y="${height - 12}" text-anchor="middle" font-family="monospace" font-size="16" font-weight="700" fill="#3a4149">${this.formatHenries(henries)}${this.specSuffix(spec)}</text>`;
 
         tgt.innerHTML = `
         <svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" style="max-width: 460px; width: 100%; height: auto;">
@@ -1025,7 +1025,7 @@ export default class extends Controller {
         const innerX = bodyX + capW;
         const innerW = bodyW - 2 * capW;
 
-        const fill = options.bodyColor || "#33363d";
+        const fill = this.safeColor(options.bodyColor, "#33363d");
         const textColor = this.contrastColor(fill);
         const fontSize = Math.max(15, Math.min(38, Math.round(bodyH * 0.5), Math.round(innerW * 1.6 / Math.max(3, marking.length))));
 
@@ -1053,7 +1053,7 @@ export default class extends Controller {
                     <rect x="${innerX + innerW - 1}" y="${bodyY}" width="3" height="${bodyH}" fill="#000000" opacity="0.28"/>
                 </g>
                 <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central"
-                      font-family="monospace" font-weight="bold" font-size="${fontSize}" fill="${textColor}">${marking}</text>
+                      font-family="monospace" font-weight="bold" font-size="${fontSize}" fill="${textColor}">${this.escapeXml(marking)}</text>
             </g>
             ${callouts}
             ${valueCaption}
@@ -1072,7 +1072,7 @@ export default class extends Controller {
      */
     drawDiode(target, subtype, voltage, options = {}) {
         if (subtype === "led") {
-            this.drawLed(target, options.bodyColor || options.color || "#c0392b");
+            this.drawLed(target, this.safeColor(options.bodyColor || options.color, "#c0392b"));
             return;
         }
         this.drawAxialDiode(target, subtype, voltage, options);
@@ -1095,7 +1095,7 @@ export default class extends Controller {
         const bodyY = cy - bodyH / 2;
         const bodyBottom = bodyY + bodyH;
 
-        const body = options.bodyColor || "#20242a";
+        const body = this.safeColor(options.bodyColor, "#20242a");
         //Cathode band (the stripe marking the "line" side of the diode symbol), near the right end.
         const bandW = 15;
         const bandX = bodyX + bodyW - 34;
@@ -1116,7 +1116,7 @@ export default class extends Controller {
         const bodyMarking = marking
             ? `<text x="${bodyX + bodyW / 2}" y="${cy}" text-anchor="middle" dominant-baseline="central"
                    font-family="monospace" font-weight="700" font-size="${markingFontSize}" fill="${textColor}"
-                   style="paint-order:stroke" stroke="${body}" stroke-width="0.5">${marking}</text>`
+                   style="paint-order:stroke" stroke="${body}" stroke-width="0.5">${this.escapeXml(marking)}</text>`
             : "";
         const belowCaption = caption === ""
             ? ""
@@ -1368,7 +1368,7 @@ export default class extends Controller {
         const pitch = this.capPitchValue();
         const pitchIn = CAP_PITCHES[pitch];
         const voltage = this.capVoltageValue();
-        const fill = this.bodyColor(this.hasCapBodyColorTarget ? this.capBodyColorTarget : null, "#e0a63a");
+        const fill = this.safeColor(this.bodyColor(this.hasCapBodyColorTarget ? this.capBodyColorTarget : null, "#e0a63a"), "#e0a63a");
         const textColor = this.contrastColor(fill);
         const shadow = textColor === "#f5f5f5" ? "#00000088" : "#ffffff66";
 
@@ -1489,7 +1489,7 @@ export default class extends Controller {
                 <path d="${bodyPath}" fill="none" stroke="#00000055" stroke-width="1.2"/>
                 <text x="${cx}" y="${codeY}" text-anchor="middle" dominant-baseline="central"
                       font-family="monospace" font-weight="bold" font-size="${codeFont}"
-                      fill="${textColor}" style="paint-order:stroke" stroke="${shadow}" stroke-width="0.6">${marking}</text>
+                      fill="${textColor}" style="paint-order:stroke" stroke="${shadow}" stroke-width="0.6">${this.escapeXml(marking)}</text>
                 ${voltageSvg}
             </g>
             ${callouts}
@@ -1709,6 +1709,21 @@ export default class extends Controller {
         const b = parseInt(c.substring(4, 6), 16);
         const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
         return luminance > 0.6 ? "#1a1100" : "#f5f5f5";
+    }
+
+    /**
+     * Escapes a string for safe interpolation into the SVG markup we build with template strings and
+     * assign via innerHTML. The live preview is NOT server-sanitized, so anything derived from part
+     * data (e.g. a diode marking) must be escaped here as defence-in-depth against markup injection.
+     */
+    escapeXml(value) {
+        return String(value).replace(/[&<>"']/g, (c) =>
+            ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"})[c]);
+    }
+
+    /** Returns hex only if it is a valid #rgb/#rrggbb(aa) colour, else the fallback — so a colour value can't break out of an attribute. */
+    safeColor(hex, fallback = "#000000") {
+        return /^#[0-9a-fA-F]{3,8}$/.test(String(hex)) ? String(hex) : fallback;
     }
 
     /*
@@ -1948,7 +1963,7 @@ export default class extends Controller {
             Math.round(innerW * 1.6 / Math.max(3, marking.length))
         ));
 
-        const fill = this.bodyColor(this.hasSmdBodyColorTarget ? this.smdBodyColorTarget : null, "#262626");
+        const fill = this.safeColor(this.bodyColor(this.hasSmdBodyColorTarget ? this.smdBodyColorTarget : null, "#262626"), "#262626");
         const textColor = this.contrastColor(fill);
 
         const callouts =
@@ -1981,7 +1996,7 @@ export default class extends Controller {
                     <rect x="${innerX + innerW - 1}" y="${bodyY}" width="3" height="${bodyH}" fill="#000000" opacity="0.28"/>
                 </g>
                 <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central"
-                      font-family="monospace" font-weight="bold" font-size="${fontSize}" fill="${textColor}">${marking}</text>
+                      font-family="monospace" font-weight="bold" font-size="${fontSize}" fill="${textColor}">${this.escapeXml(marking)}</text>
             </g>
             ${callouts}
             ${valueCaption}
@@ -2068,7 +2083,7 @@ export default class extends Controller {
         const innerX = bodyX + termW;
         const innerW = bodyW - 2 * termW;
 
-        const fill = options.bodyColor || "#c8a37a";
+        const fill = this.safeColor(options.bodyColor, "#c8a37a");
 
         const callouts =
             this.dimH(bodyX, bodyX + bodyW, bodyBottom + 18, `L ${this.formatMm(pkg.l)}`)
@@ -2132,10 +2147,16 @@ export default class extends Controller {
         if (field === "code") {
             henries = this.inductorCodeToHenries(this.hasSmdIndCodeTarget ? this.smdIndCodeTarget.value : "");
         } else {
-            const raw = this.hasSmdIndValueInputTarget ? this.smdIndValueInputTarget.value : "100u";
-            //Accept "100µH", "10mH", "4.7uH", "1H" — strip the trailing H, then reuse the numeric parser.
-            const s = (raw || "").trim().replace(/h$/i, "").trim();
-            henries = this.parseValue(s, "R");
+            const raw = (this.hasSmdIndValueInputTarget ? this.smdIndValueInputTarget.value : "100u").trim();
+            //Accept "100µH", "10mH", "4.7uH"; a bare number (no prefix) reads as µH, matching the THT inductor tab.
+            const m = raw.match(/^([\d.]+)\s*(p|n|u|µ|m)?\s*h?$/i);
+            if (m) {
+                const num = parseFloat(m[1]);
+                const factors = {p: 1e-12, n: 1e-9, u: 1e-6, "µ": 1e-6, m: 1e-3};
+                henries = m[2] ? num * factors[m[2].toLowerCase()] : num * 1e-6;
+            } else {
+                henries = null;
+            }
         }
 
         if (henries === null || !(henries > 0)) {

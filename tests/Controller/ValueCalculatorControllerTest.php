@@ -42,16 +42,34 @@ final class ValueCalculatorControllerTest extends WebTestCase
 {
     private function loginAdmin(): KernelBrowser
     {
+        return $this->loginAs('admin');
+    }
+
+    private function loginAs(string $username): KernelBrowser
+    {
         $client = static::createClient();
         $em = static::getContainer()->get(EntityManagerInterface::class);
-        $admin = $em->getRepository(User::class)->findOneBy(['name' => 'admin']);
-        if ($admin === null) {
-            $this->markTestSkipped("Fixture user 'admin' not found.");
+        $user = $em->getRepository(User::class)->findOneBy(['name' => $username]);
+        if ($user === null) {
+            $this->markTestSkipped("Fixture user '$username' not found.");
         }
-        $client->loginUser($admin);
+        $client->loginUser($user);
         $client->followRedirects(false);
 
         return $client;
+    }
+
+    /**
+     * Part-DB answers an unauthorized request with 401/403 or a redirect (to the login/permission
+     * page) depending on context, so accept any of those — the point is that access is refused.
+     */
+    private function assertDenied(KernelBrowser $client): void
+    {
+        $code = $client->getResponse()->getStatusCode();
+        $this->assertTrue(
+            $code === 401 || $code === 403 || $client->getResponse()->isRedirect(),
+            "Expected 401/403/redirect for an unauthorized request, got $code"
+        );
     }
 
     public function testValueCalculatorPageLoads(): void
@@ -113,6 +131,52 @@ final class ValueCalculatorControllerTest extends WebTestCase
         ], [], ['HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest']);
 
         self::assertResponseIsSuccessful();
+        $payload = json_decode((string) $client->getResponse()->getContent(), true);
+        self::assertIsArray($payload);
+        self::assertTrue($payload['success'] ?? false, 'Expected {success: true} from the generate-image endpoint.');
+
+        //The picture must actually be attached and (preview=1) set as the master picture.
+        $em = static::getContainer()->get(EntityManagerInterface::class);
+        $em->clear();
+        $part = $em->find(Part::class, 1);
+        self::assertNotNull($part->getMasterPictureAttachment(), 'Generated image should be set as the master picture.');
+    }
+
+    public function testGenerateImageRejectsInvalidCsrf(): void
+    {
+        $client = $this->loginAdmin();
+        $row = $this->resistorCandidateRow($client);
+        $client->request('POST', (string) $row->attr('data-endpoint'), [
+            'svg' => '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10"/></svg>',
+            'name' => 'Should be rejected',
+            '_token' => 'definitely-not-a-valid-token',
+        ], [], ['HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest']);
+
+        $this->assertDenied($client);
+    }
+
+    public function testValueCalculatorDeniedWithoutPermission(): void
+    {
+        $client = $this->loginAs('noread');
+        $client->request('GET', '/en/tools/value_calc');
+        $this->assertDenied($client);
+    }
+
+    public function testBulkGenerateDeniedWithoutPermission(): void
+    {
+        $client = $this->loginAs('noread');
+        $client->request('GET', '/en/tools/bulk_generate_images?ids=1');
+        $this->assertDenied($client);
+    }
+
+    public function testGenerateImageDeniedWithoutEditPermission(): void
+    {
+        $client = $this->loginAs('noread');
+        $client->request('POST', '/en/part/1/generate_image', [
+            'svg' => '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"></svg>',
+            '_token' => 'irrelevant-edit-is-checked-first',
+        ], [], ['HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest']);
+        $this->assertDenied($client);
     }
 
     public function testSetEdaWritesKicadFields(): void
@@ -127,6 +191,16 @@ final class ValueCalculatorControllerTest extends WebTestCase
         ], [], ['HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest']);
 
         self::assertResponseIsSuccessful();
+        $payload = json_decode((string) $client->getResponse()->getContent(), true);
+        self::assertTrue($payload['success'] ?? false, 'Expected {success: true} from the set-eda endpoint.');
+
+        //The EDA fields must actually be written to the part.
+        $em = static::getContainer()->get(EntityManagerInterface::class);
+        $em->clear();
+        $eda = $em->find(Part::class, 1)->getEdaInfo();
+        self::assertSame('Device:R', $eda->getKicadSymbol());
+        self::assertSame('R', $eda->getReferencePrefix());
+        self::assertSame('Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal', $eda->getKicadFootprint());
     }
 
     /**
