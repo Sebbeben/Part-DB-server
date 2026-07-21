@@ -57,7 +57,7 @@ class GeneratedImageAttachmentHelper
         //handleUpload() does not enforce the upload-size limit, so guard it here. The SVG is
         //stored roughly 1:1 (base64 is only the transport encoding), so its byte length is a
         //good proxy for the resulting file size.
-        if (strlen($svg) > $this->submitHandler->getMaximumAllowedUploadSize()) {
+        if (strlen($svg) > $this->submitHandler->getMaximumEffectiveUploadSize()) {
             throw new \RuntimeException('The generated image exceeds the maximum allowed upload size.');
         }
 

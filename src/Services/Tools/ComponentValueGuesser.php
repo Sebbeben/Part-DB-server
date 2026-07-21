@@ -268,25 +268,25 @@ class ComponentValueGuesser
      */
     private function detectDiodePartNumber(string $text): ?string
     {
-        //Zener families: BZX/BZV/BZT and 1N47xx / 1N52xx.
+        //Zener families: BZX/BZV/BZT and 1N47xx / 1N52xx (with an optional letter suffix, e.g. 1N4733A).
         if (preg_match('/\bbz[xvt]\d/u', $text) === 1
-            || preg_match('/\b1n(4[67]\d{2}|52\d{2})\b/u', $text) === 1) {
+            || preg_match('/\b1n(4[67]\d{2}|52\d{2})[a-z]?\b/u', $text) === 1) {
             return 'zener';
         }
         //Schottky families: BAT, 1N58xx, MBR.
         if (preg_match('/\bbat\d/u', $text) === 1
-            || preg_match('/\b1n58\d{2}\b/u', $text) === 1
+            || preg_match('/\b1n58\d{2}[a-z]?\b/u', $text) === 1
             || preg_match('/\bmbr\d/u', $text) === 1) {
             return 'schottky';
         }
-        //TVS families: SMAJ/SMBJ, P6KE, 1.5KE.
+        //TVS families: SMAJ/SMBJ, P6KE, 1.5KE (the KE families carry a voltage suffix, e.g. P6KE18A).
         if (preg_match('/\bsm[ab]j\d/u', $text) === 1
-            || preg_match('/\bp6ke\b/u', $text) === 1
-            || preg_match('/\b1\.5ke\b/u', $text) === 1) {
+            || preg_match('/\bp6ke\d/u', $text) === 1
+            || preg_match('/\b1\.5ke\d/u', $text) === 1) {
             return 'tvs';
         }
-        //General-purpose / rectifier families: 1N4148, 1N400x, 1N914, BAV/BAS.
-        if (preg_match('/\b1n(400\d|4148|914)\b/u', $text) === 1
+        //General-purpose / rectifier families: 1N4148, 1N400x, 1N914, BAV/BAS (optional letter suffix).
+        if (preg_match('/\b1n(400\d|4148|914)[a-z]?\b/u', $text) === 1
             || preg_match('/\bba[vs]\d/u', $text) === 1) {
             return 'diode';
         }
