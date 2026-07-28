@@ -12998,13 +12998,13 @@ Buerklin-API Authentication server:
     <unit id="vcalc_perm" name="perm.tools.value_calculator">
       <segment state="translated">
         <source>perm.tools.value_calculator</source>
-        <target>Resistor &amp; capacitor calculator</target>
+        <target>Component image generator</target>
       </segment>
     </unit>
     <unit id="vcalc_title" name="tools.value_calc.title">
       <segment state="translated">
         <source>tools.value_calc.title</source>
-        <target>Resistor &amp; capacitor calculator</target>
+        <target>Component image generator</target>
       </segment>
     </unit>
     <unit id="bulkgen_title" name="tools.bulk_gen.title">
