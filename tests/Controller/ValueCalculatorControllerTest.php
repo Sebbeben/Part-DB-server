@@ -75,14 +75,14 @@ final class ValueCalculatorControllerTest extends WebTestCase
     public function testValueCalculatorPageLoads(): void
     {
         $client = $this->loginAdmin();
-        $client->request('GET', '/en/tools/value_calc');
+        $client->request('GET', '/en/tools/component_image_generator');
         self::assertResponseIsSuccessful();
     }
 
     public function testValueCalculatorPrefillsFromPart(): void
     {
         $client = $this->loginAdmin();
-        $client->request('GET', '/en/tools/value_calc?part=1');
+        $client->request('GET', '/en/tools/component_image_generator?part=1');
         self::assertResponseIsSuccessful();
     }
 
@@ -158,7 +158,7 @@ final class ValueCalculatorControllerTest extends WebTestCase
     public function testValueCalculatorDeniedWithoutPermission(): void
     {
         $client = $this->loginAs('noread');
-        $client->request('GET', '/en/tools/value_calc');
+        $client->request('GET', '/en/tools/component_image_generator');
         $this->assertDenied($client);
     }
 

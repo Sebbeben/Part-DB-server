@@ -134,10 +134,10 @@ class ToolsController extends AbstractController
         return $this->render('tools/ic_logos/ic_logos.html.twig');
     }
 
-    #[Route(path: '/value_calc', name: 'tools_value_calculator')]
+    #[Route(path: '/component_image_generator', name: 'tools_component_image_generator')]
     public function valueCalculator(Request $request, EntityManagerInterface $em, ComponentValueGuesser $guesser): Response
     {
-        $this->denyAccessUnlessGranted('@tools.value_calculator');
+        $this->denyAccessUnlessGranted('@tools.component_image_generator');
 
         //Optionally the calculator can be opened in the context of a part, to attach the generated image to it.
         $part = null;
@@ -172,7 +172,7 @@ class ToolsController extends AbstractController
     #[Route(path: '/bulk_generate_images', name: 'tools_bulk_generate')]
     public function bulkGenerate(Request $request, EntityManagerInterface $em, ComponentValueGuesser $guesser): Response
     {
-        $this->denyAccessUnlessGranted('@tools.value_calculator');
+        $this->denyAccessUnlessGranted('@tools.component_image_generator');
 
         $candidates = [];
         $skipped = 0;

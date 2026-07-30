@@ -1,6 +1,6 @@
 {% import "components/attachments.macro.html.twig" as attachments %}
 
-{% if part.id is not null and is_granted('@tools.value_calculator') %}
+{% if part.id is not null and is_granted('@tools.component_image_generator') %}
     <div class="mb-3">
         {% include "tools/value_calculator/_generate_button.html.twig" %}
         <small class="text-muted ms-2">{% trans %}tools.value_calc.attach.generate_hint{% endtrans %}</small>

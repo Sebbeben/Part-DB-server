@@ -12995,9 +12995,9 @@ Buerklin-API Authentication server:
         <target>Last stocktake</target>
       </segment>
     </unit>
-    <unit id="vcalc_perm" name="perm.tools.value_calculator">
+    <unit id="vcalc_perm" name="perm.tools.component_image_generator">
       <segment state="translated">
-        <source>perm.tools.value_calculator</source>
+        <source>perm.tools.component_image_generator</source>
         <target>Component image generator</target>
       </segment>
     </unit>
